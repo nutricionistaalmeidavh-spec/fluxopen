@@ -149,24 +149,26 @@ export function buildFriendlyReport(report){
   }
   const list=[...items.values()].sort((a,b)=>(ORDER[a.priority]??9)-(ORDER[b.priority]??9)||a.title.localeCompare(b.title,"pt-BR")).slice(0,100);
   const failed=report.status==="failed"||modules.some(m=>m.status==="error");
-  const incomplete=hasZapPartial||failed||modules.length===0;
+  const incomplete=hasZapPartial||failed||modules.length===0||modules.some(m=>m.status==="skipped")||report.status==="completed_with_errors";
   const caveats=[
     "Auditoria automatizada conservadora: não testa integralmente autenticação, permissões internas, pagamentos ou invasões reais.",
     "Alertas de scanners são indícios que precisam ser confirmados; não equivalem a falhas exploráveis comprovadas."
   ];
   if(hasZapPartial)caveats.push("As evidências do ZAP são parciais: houve erro na geração do relatório estruturado. Os avisos em texto foram recuperados.");
   if(knownSubdomains.size)caveats.push("Subdomínios identificados por reconhecimento não foram automaticamente incluídos no escopo da auditoria.");
+  if(modules.some(m=>m.status==="skipped"))caveats.push("Ferramentas ignoradas não foram executadas; cobertura limitada ao escopo aplicável.");
   if(failed)caveats.push("Uma ou mais ferramentas não concluíram normalmente; o resultado é inconclusivo para essas verificações.");
   const priorityCount=list.filter(x=>x.priority==="alta").length;
   return{
     version:1,
-    headline:failed?"Auditoria incompleta: resultados inconclusivos":list.some(x=>x.priority==="alta"||x.priority==="media")?"Melhorias de segurança recomendadas":list.length?"Pontos para revisão técnica":"Nenhum alerta interpretável nesta análise",
-    assessment:failed?
+    headline:incomplete?"Auditoria incompleta: resultados inconclusivos":list.some(x=>x.priority==="alta"||x.priority==="media")?"Melhorias de segurança recomendadas":list.length?"Pontos para revisão técnica":"Nenhum alerta interpretável nesta análise",
+    assessment:incomplete?
       "Não é possível emitir uma avaliação geral: uma etapa falhou.":
       list.length?
       "Foram encontradas configurações a revisar. Nenhum achado listado aqui, isoladamente, comprova invasão, vazamento ou uma vulnerabilidade explorada.":
       "Os scanners não geraram achados interpretáveis no relatório disponível. Isso não garante que o site esteja seguro.",
-    executedTools:modules.filter(x=>["ok","warning","skipped"].includes(x.status)).length,
+    executedTools:modules.filter(x=>["ok","warning"].includes(x.status)).length,
+    skippedTools:modules.filter(x=>x.status==="skipped").length,
     totalTools:modules.length,
     warningsZap,
     priorityCount,
