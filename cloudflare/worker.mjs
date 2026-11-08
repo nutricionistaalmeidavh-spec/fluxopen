@@ -1,5 +1,5 @@
 import { PANEL_HTML } from "./panel.mjs";
-import { buildFriendlyReport, renderFriendlyHtml } from "./friendly.mjs";
+import { buildFriendlyReport, renderFriendlyHtml, friendlyReportFilename } from "./friendly.mjs";
 import { reconcilePending } from "./dispatch.mjs";
 import { registrationOptions, registrationFinish, authenticationOptions, authenticationFinish, identity, setIdentity, checkIdentity } from "./webauthn.mjs";
 /**
@@ -205,7 +205,8 @@ async function downloadReport(env,id,format) {
   if(!row||!row.report)fail(404,"Relatório ainda indisponível");
   const report=JSON.parse(row.report);
   report.friendly=buildFriendlyReport(report);
-  const headers={"Content-Disposition":"attachment; filename=\"fluxopen-"+id+"."+format+"\""};
+  if(!["html","json"].includes(format))fail(422,"Formato inválido");
+  const headers={"Content-Disposition":'attachment; filename="'+friendlyReportFilename(report,format)+'"'};
   if(format==="json")return json(report,200,headers);
   if(format!=="html")fail(422,"Formato inválido");
   return content(renderFriendlyHtml(report),200,headers);
