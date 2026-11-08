@@ -72,8 +72,8 @@ test("HTML exportado escapa payloads maliciosos nos dados",()=>{
   const html=renderFriendlyHtml(report);
   assert.match(html,/&lt;img src=x onerror=alert\(1\)&gt;/);
   assert.doesNotMatch(html,/<img src=x/);
-  assert.match(html,/Plano de correção/i);
-  assert.match(html,/Evidências técnicas/i);
+  assert.match(html,/Plano de ação/i);
+  assert.match(html,/Detalhes técnicos/i);
 });
 test("resultados desconhecidos permanecem revisão técnica, sem texto imaginado",()=>{
   const report=fixture({modules:[],findings:[{tool:"nuclei",severity:"medium",title:"CVE test",url}]});
