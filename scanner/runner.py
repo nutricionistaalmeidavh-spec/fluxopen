@@ -130,7 +130,26 @@ def normalize_findings(tool, root):
     return findings[:150]
 
 def excerpt(root, tool, stdout):
-    return (stdout or "")[-9000:]
+    """Preview the tool's actual structured output, not just console chatter."""
+    filenames = {
+        "zap": "zap.json", "nuclei": "nuclei.jsonl",
+        "subfinder": "subfinder.txt", "httpx": "httpx.jsonl",
+        "katana": "katana.jsonl", "ffuf": "ffuf.json",
+        "feroxbuster": "feroxbuster.jsonl", "testssl": "testssl.json",
+        "nikto": "nikto.json",
+    }
+    filename = filenames.get(tool)
+    preview = ""
+    if filename:
+        path = root / filename
+        if path.exists() and path.is_file():
+            try:
+                with path.open("r", errors="replace") as stream:
+                    preview = stream.read(8000)
+            except OSError:
+                pass
+    log = (stdout or "")[-2000:]
+    return (("Dados de " + filename + ":\\n" + preview + "\\n") if preview else "") + log
 
 def execute(tool, target, host, root):
     began = time.time()
