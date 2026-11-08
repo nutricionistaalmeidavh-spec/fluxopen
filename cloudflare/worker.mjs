@@ -1,3 +1,4 @@
+import { PANEL_HTML } from "./panel.mjs";
 /**
  * FluxOpen Cloudflare Worker.
  * Workers Free + D1 Free; scanner containers remain in GitHub Actions.
@@ -215,7 +216,7 @@ export default {
   async fetch(req,env) {
     const url=new URL(req.url),path=url.pathname,method=req.method;
     try {
-      if(path==="/"&&method==="GET")return content(env.PANEL_HTML||"<h1>FluxOpen</h1><p>O painel precisa ser publicado.</p>");
+      if(path==="/"&&method==="GET")return content(PANEL_HTML||"<h1>FluxOpen</h1><p>O painel precisa ser publicado.</p>");
       if(path==="/health"&&method==="GET")return json({ok:true,platform:"cloudflare-workers",database:!!env.DB,login_configured:!!env.ADMIN_PASSWORD,github_configured:!!env.GH_TOKEN,signing_configured:!!env.SCAN_SIGNING_SECRET});
       if(!path.startsWith("/api/"))fail(404,"Rota não encontrada");
       if(path==="/api/callback"&&method==="POST")return await callback(req,env);
