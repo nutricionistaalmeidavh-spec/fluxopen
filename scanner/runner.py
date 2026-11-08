@@ -38,7 +38,7 @@ def command(tool, target, host):
     if tool == "nuclei":
         return ["-u", target, "-jsonl", "-o", "/out/nuclei.jsonl", "-rl", "2",
                 "-c", "1", "-timeout", "8", "-retries", "0", "-ni",
-                "-etags", "dos,stress,fuzz", "-severity", "medium,high,critical"]
+                "-etags", "dos,stress,fuzz", "-duc", "-severity", "medium,high,critical"]
     if tool == "subfinder":
         return ["-d", host, "-silent", "-o", "/out/subfinder.txt"]
     if tool == "httpx":
@@ -49,7 +49,7 @@ def command(tool, target, host):
     if tool == "ffuf":
         return ["ffuf", "-u", target.rstrip("/") + "/FUZZ",
                 "-w", "/out/wordlist.txt", "-rate", "2", "-t", "1",
-                "-timeout", "10", "-maxtime", "120", "-of", "json",
+                "-timeout", "10", "-maxtime", "120", "-ac", "-of", "json",
                 "-o", "/out/ffuf.json", "-s"]
     if tool == "feroxbuster":
         return ["feroxbuster", "-u", target, "-w", "/out/wordlist.txt",
@@ -226,6 +226,12 @@ def execute(tool, target, host, root):
         status = "ok" if result.returncode == 0 else "warning"
         if result.returncode in (125, 126, 127):
             status = "error"
+        # Some scanner wrappers return 0 after printing CLI usage instead of running.
+        if tool == "nikto" and re.search(r"(?im)^\\s*(?:Usage:|Options:|Invalid option|Unknown option)", log):
+            status = "error"
+        # ZAP stdout can contain findings even when structured report generation fails.
+        if tool == "zap" and re.search(r"Automation plan failures|NoSuchFileException|failed to generate report", log, re.I):
+            status = "warning"
         metrics = {}
         if tool == "zap":
             count = re.search(r"(?<!\\w)WARN-NEW:\\s*(\\d+)(?=\\s|$)", log)
@@ -240,6 +246,17 @@ def execute(tool, target, host, root):
     except (OSError, ValueError) as exc:
         return dict(tool=tool, status="error", seconds=round(time.time() - began, 1),
                     excerpt="Falha ao iniciar: " + str(exc)[:400])
+
+def report_status(modules):
+    """No skipped-only run is a fully completed security assessment."""
+    states = [m.get("status") for m in modules]
+    executed = any(s in ("ok", "warning") for s in states)
+    if not executed and any(s == "error" for s in states):
+        return "failed"
+    if not executed or any(s == "error" for s in states):
+        return "completed_with_errors"
+    return "completed"
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -283,9 +300,7 @@ def main():
             (output / "progress.json").write_text(json.dumps(report, ensure_ascii=False))
     finally:
         report["ended"] = int(time.time())
-        successes = sum(m["status"] in ("ok", "warning", "skipped") for m in report["modules"])
-        errors = sum(m["status"] == "error" for m in report["modules"])
-        report["status"] = "failed" if not successes else ("completed_with_errors" if errors else "completed")
+        report["status"] = report_status(report["modules"])
         report["findings"] = report["findings"][:200]
         (output / "report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2))
     return 0 if report["status"] != "failed" else 1
