@@ -17,6 +17,6 @@ test("native HTML export contains Portuguese summary and technical evidence",()=
   const result=buildFriendlyReport(sample);
   assert.equal(result.items.length,1);
   assert.match(result.items[0].title,/HTTPS/);
-  assert.match(PANEL_HTML,/Baixar relatório amigável/);
+  assert.match(PANEL_HTML,/Pentest Diagnoses/);
   assert.match(PANEL_HTML,/Ver evidências e detalhes técnicos/);
 });
