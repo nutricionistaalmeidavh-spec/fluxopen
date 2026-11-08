@@ -1,4 +1,5 @@
 import { PANEL_HTML } from "./panel.mjs";
+import { reconcilePending } from "./dispatch.mjs";
 import { registrationOptions, registrationFinish, authenticationOptions, authenticationFinish, identity, setIdentity, checkIdentity } from "./webauthn.mjs";
 /**
  * FluxOpen Cloudflare Worker.
@@ -220,11 +221,14 @@ async function callback(req,env) {
   return json({ok:true});
 }
 export default {
+  async scheduled(event,env,ctx){
+    ctx.waitUntil(reconcilePending(env,{github:gh,signManifest:encodeManifest}));
+  },
   async fetch(req,env) {
     const url=new URL(req.url),path=url.pathname,method=req.method;
     try {
       if(path==="/"&&method==="GET")return content(PANEL_HTML||"<h1>FluxOpen</h1><p>O painel precisa ser publicado.</p>");
-      if(path==="/health"&&method==="GET")return json({ok:true,platform:"cloudflare-workers",database:!!env.DB,login_configured:!!env.ADMIN_PASSWORD,github_configured:!!env.GH_TOKEN,signing_configured:!!env.SCAN_SIGNING_SECRET});
+      if(path==="/health"&&method==="GET")return json({ok:true,platform:"cloudflare-workers",database:!!env.DB,login_configured:!!env.ADMIN_PASSWORD,github_configured:!!env.GH_TOKEN,signing_configured:!!env.SCAN_SIGNING_SECRET,queue_recovery:"cron"});
       if(!path.startsWith("/api/"))fail(404,"Rota não encontrada");
       if(path==="/api/callback"&&method==="POST")return await callback(req,env);
       if(path==="/api/session"&&method==="GET"){
