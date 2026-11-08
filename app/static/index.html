@@ -60,7 +60,7 @@ h1,h2,h3{letter-spacing:-.8px}h1{font-size:clamp(27px,3vw,38px);margin:24px 0 8p
         <div class="formfield"><label for="scanTarget">01 / Alvo autorizado</label><select id="scanTarget" required><option value="">Cadastre um alvo primeiro</option></select></div>
         <span class="section-label">02 / Perfil de execução</span>
         <div class="modebar"><button type="button" class="mode on" data-mode="passive">Conservador</button><button type="button" class="mode" data-mode="active">Ativo controlado</button></div>
-        <span class="section-label">03 / Selecione ferramentas</span>
+        <div class="panelhead" style="margin-top:20px;margin-bottom:12px"><span class="section-label" style="margin:0">03 / Selecione ferramentas</span><button type="button" class="btn secondary small" id="selectAll">Selecionar os 10 módulos</button></div>
         <div class="toolgrid" id="tools"></div>
         <div class="safety" id="safeNotice">Perfil conservador: reconhecimento, coleta de endpoints, avaliação TLS e ZAP Baseline. Ainda gera tráfego; respeite os limites autorizados.</div>
         <div class="confirm hidden" id="activeConfirm"><input id="confirmActive" type="checkbox"><label for="confirmActive">Confirmo que a autorização cobre testes ativos com fuzzing, varredura de diretórios e sondagem de parâmetros neste domínio.</label></div>
@@ -135,6 +135,7 @@ $("activeConfirm").classList.toggle("hidden",mode!=="active");
 document.querySelectorAll("[data-mode]").forEach(b=>b.classList.toggle("on",b.dataset.mode===mode));
 }
 document.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>{mode=b.dataset.mode;if(mode==="passive")selected=new Set([...selected].filter(s=>TOOLS.find(t=>t[0]===s)[3]===false));renderTools()});
+$("selectAll").onclick=()=>{mode="active";selected=new Set(TOOLS.map(t=>t[0]));renderTools();toast("10 ferramentas selecionadas. Confirme a autorização para testes ativos.")};
 function status(s){const label={queued:"Na fila",running:"Executando",completed:"Concluída",completed_with_errors:"Com avisos",failed:"Falhou"};return '<span class="status '+esc(s)+'">'+esc(label[s]||s)+'</span>'}
 function shortDate(n){return new Date(n*1000).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"})}
 function scanTable(rows){if(!rows.length)return '<div class="empty"><strong>Nenhuma execução ainda</strong>Cadastre um alvo e dispare a primeira auditoria.</div>';return '<div class="tablewrap"><table class="data-table"><thead><tr><th>Alvo</th><th>Ferramentas</th><th>Início</th><th>Status</th><th>Relatório</th></tr></thead><tbody>'+rows.map(s=>'<tr><td><strong>'+esc(s.target_name||s.url)+'</strong><br><span class="muted">'+esc(s.url)+'</span></td><td>'+s.tools.length+' módulos</td><td>'+shortDate(s.started)+'</td><td>'+status(s.status)+'</td><td><button class="linkbtn" data-scan="'+esc(s.id)+'">Visualizar →</button></td></tr>').join("")+'</tbody></table></div>'}
