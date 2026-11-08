@@ -46,7 +46,7 @@ test("Recupera pedido enfileirado com um único dispatch assinado e escopo limit
   const payload=JSON.parse(input.payload);
   assert.equal(input.scan_id,scan.id);
   assert.equal(input.signature,"signed");
-  assert.equal(input.verification_only,false);
+  assert.equal(input.verification_only,"false");
   assert.equal(payload.url,scan.url);
   assert.equal(payload.mode,"passive");
   assert.deepEqual(payload.tools,JSON.parse(scan.tools));
