@@ -34,3 +34,14 @@ test("Worker serves existing dashboard at root", async()=>{
   assert.match(await response.text(),/FluxOpen/);
   assert.equal(response.headers.get("x-frame-options"),"DENY");
 });
+
+
+test("callback rejects replay and validates scanner result fields",async()=>{
+  const {readFileSync}=await import("node:fs");
+  const source=readFileSync(new URL("../cloudflare/worker.mjs",import.meta.url),"utf8");
+  assert.match(source,/status IN \\('queued','running'\\) AND report IS NULL/);
+  assert.match(source,/saved\\.meta\\?\\.changes!==1/);
+  assert.match(source,/Achados inválidos/);
+  assert.match(source,/Módulos inválidos/);
+  assert.match(source,/\\\"warning\\\"/);
+});
