@@ -27,6 +27,7 @@ class PanelTests(unittest.TestCase):
         cls.client.close()
 
     def test_auth_and_csrf_are_enforced(self):
+        self.client.cookies.clear()  # Each test starts logged out.
         self.assertEqual(self.client.get("/api/targets").status_code, 401)
         login = self.client.post("/api/login", json={"password": "integration-test-password"})
         self.assertEqual(login.status_code, 200)
