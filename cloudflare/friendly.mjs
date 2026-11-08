@@ -147,7 +147,8 @@ export function buildFriendlyReport(report){
   }
   const list=[...items.values()].sort((a,b)=>(ORDER[a.priority]??9)-(ORDER[b.priority]??9)||a.title.localeCompare(b.title,"pt-BR")).slice(0,100);
   const failed=report.status==="failed"||modules.some(m=>m.status==="error");
-  const incomplete=hasZapPartial||failed||modules.length===0;
+  const skipped=modules.filter(m=>m.status==="skipped").length;
+  const incomplete=hasZapPartial||failed||modules.length===0||skipped>0;
   const caveats=[
     "Auditoria automatizada conservadora: não testa integralmente autenticação, permissões internas, pagamentos ou invasões reais.",
     "Alertas de scanners são indícios que precisam ser confirmados; não equivalem a falhas exploráveis comprovadas."
@@ -155,6 +156,7 @@ export function buildFriendlyReport(report){
   if(hasZapPartial)caveats.push("As evidências do ZAP são parciais: houve erro na geração do relatório estruturado. Os avisos em texto foram recuperados.");
   if(knownSubdomains.size)caveats.push("Subdomínios identificados por reconhecimento não foram automaticamente incluídos no escopo da auditoria.");
   if(failed)caveats.push("Uma ou mais ferramentas não concluíram normalmente; o resultado é inconclusivo para essas verificações.");
+  if(skipped)caveats.push(skipped+" ferramenta(s) ignorada(s) por não se aplicar(em) ao alvo ou à URL; não foram executadas.");
   const priorityCount=list.filter(x=>x.priority==="alta").length;
   return{
     version:1,
@@ -164,7 +166,8 @@ export function buildFriendlyReport(report){
       list.length?
       "Foram encontradas configurações a revisar. Nenhum achado listado aqui, isoladamente, comprova invasão, vazamento ou uma vulnerabilidade explorada.":
       "Os scanners não geraram achados interpretáveis no relatório disponível. Isso não garante que o site esteja seguro.",
-    executedTools:modules.filter(x=>["ok","warning","skipped"].includes(x.status)).length,
+    executedTools:modules.filter(x=>["ok","warning"].includes(x.status)).length,
+    skippedTools:skipped,
     totalTools:modules.length,
     warningsZap,
     priorityCount,
