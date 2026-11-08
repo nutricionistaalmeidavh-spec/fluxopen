@@ -54,7 +54,7 @@ function kbFor(id,raw){
   return known||{
     title:"Alerta técnico para validação ("+truncate(raw?.title||id,85)+")",
     priority:"revisar",
-    description:"Uma ferramenta sinalizou um resultado que requer interpretação técnica. Não foi possível verificar automaticamente seu impacto.",
+    description:"Uma ferramenta sinalizou um resultado que exige validação técnica. Não foi possível verificar automaticamente seu impacto.",
     impact:"A existência do alerta não comprova que a vulnerabilidade seja explorável.",
     recommendation:"Verificar o resultado original e confirmar manualmente antes de atribuir uma prioridade de risco."
   };
@@ -115,11 +115,12 @@ export function buildFriendlyReport(report){
   const auditedHost=host||"";
   for(const m of modules){
     const tool=String(m.tool||"");
-    const excerpt=String(m.excerpt||"");
+    const excerpt=String(m.excerpt||"").replace(/\\n/g,"\n");
     if(tool==="zap"){
       const matches=[...excerpt.matchAll(/^\s*WARN-NEW:\s*(.+?)\s+\[(\d{5})\]\s+x\s+(\d+)\s*$/gm)];
       const total=excerpt.match(/(?:^|\s)WARN-NEW:\s*(\d+)(?=\s|$)/m);
       if(total)warningsZap=Number(total[1]);
+      if(Number.isInteger(m.zap_warnings))warningsZap=m.zap_warnings;
       if(/Automation plan failures|NoSuchFileException|failed to generate report/i.test(excerpt))hasZapPartial=true;
       for(let n=0;n<matches.length;n++){
         const one=matches[n],following=excerpt.slice(one.index+one[0].length,
