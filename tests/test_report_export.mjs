@@ -7,6 +7,7 @@ const report={
   url:"https://artisys.dev/",
   started:1794163810,ended:1794165557,status:"completed_with_errors",
   modules:[{tool:"zap",status:"ok",excerpt:"Verificações concluídas."},
+    {tool:"httpx",status:"ok",excerpt:"HTTP 200"},
     {tool:"nuclei",status:"error",excerpt:"Tempo limite atingido."},
     {tool:"sqlmap",status:"skipped",excerpt:"Sem parâmetros para testar."}],
   findings:[
