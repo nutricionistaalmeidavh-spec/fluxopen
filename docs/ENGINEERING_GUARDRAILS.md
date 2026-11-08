@@ -37,7 +37,7 @@ As verificações são reproduzíveis no GitHub Actions em `.github/workflows/ci
 
 ## P5 — validação obrigatória antes do merge
 1. `python3 -m unittest discover -s tests -v`
-2. `node --test tests/*.mjs` (além dos testes com browser, quando configurados no CI).
+2. Executar os testes Node do job `tests` em `.github/workflows/ci.yml`, incluindo callback, Worker, WebAuthn, relatórios, dashboard e dispatch.\n   Para os testes Chromium, instalar Playwright/Chromium open source conforme o job `report_browser_e2e` (dependência exclusiva de QA, não do funcionamento do FluxOpen).
 3. GitHub Actions: jobs `tests`, `scanner_smoke` e browser E2E, todos verdes.
 4. Inspecionar `/health`, login, passkeys e sessão em implantação autorizada, **sem exibir ou rotacionar secrets**.
 5. Verificar painel celular, download JSON/HTML, fluxo de callback e histórico do banco após publicação.
