@@ -1,3 +1,5 @@
+import vm from "node:vm";
+import { PANEL_HTML } from "../cloudflare/panel.mjs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
@@ -67,4 +69,12 @@ test("verify WebAuthn registration and signed login end-to-end",async()=>{
   await assert.rejects(()=>verifyAssertion(assertion,challenge2,origin,{...saved,counter:1}),/Contador/);
   const tampered={...assertion,response:{...assertion.response,signature:b64u(toDER(new Uint8Array(64).fill(1)))}};
   await assert.rejects(()=>verifyAssertion(tampered,challenge2,origin,saved),/Assinatura/);
+});
+
+test("published Cloudflare dashboard JavaScript parses and includes passkey controls",()=>{
+  const script=PANEL_HTML.split("<script>",2)[1]?.split("</script>",1)[0];
+  assert.ok(script,"missing panel script");
+  assert.doesNotThrow(()=>new vm.Script(script));
+  assert.match(PANEL_HTML,/id="passkeyLogin"/);
+  assert.match(PANEL_HTML,/id="passkeyRegister"/);
 });
