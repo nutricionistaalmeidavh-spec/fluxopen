@@ -45,3 +45,12 @@ O código está em cloudflare/worker.mjs e cloudflare/panel.mjs. O Worker recebe
 - O painel depende das franquias gratuitas do Cloudflare e GitHub Actions, não oferece garantia de custos ilimitados.
 
 Teste sem executar scans: node --test tests/test_worker.mjs
+
+## Verificação sem varreduras
+Para testar o transporte Worker → Actions → callback → D1, a API autenticada
+`POST /api/scans` aceita `verification_only: true`, além dos campos normais.
+O workflow existente valida o manifesto HMAC e os argumentos dos módulos sem
+resolver DNS, iniciar containers ou acessar o alvo. O relatório inclui
+`verification_only: true`, com todos os módulos marcados como ignorados e uma
+explicação explícita de teste. Isso valida a integração, não a detecção dos scanners.
+Falhas no callback fazem o workflow falhar, evitando sucesso silencioso sem entrega.

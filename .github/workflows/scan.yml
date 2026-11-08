@@ -15,6 +15,11 @@ on:
         description: "Identificador da auditoria"
         required: true
         type: string
+      verification_only:
+        description: "Validar integração sem acessar alvos ou executar scanners"
+        required: false
+        default: false
+        type: boolean
 permissions:
   contents: read
 concurrency:
@@ -32,15 +37,17 @@ jobs:
           FLUXOPEN_PAYLOAD: ${{ inputs.payload }}
           FLUXOPEN_SIGNATURE: ${{ inputs.signature }}
           FLUXOPEN_SCAN_ID: ${{ inputs.scan_id }}
+          FLUXOPEN_VERIFY_ONLY: ${{ inputs.verification_only }}
         run: |
-          python3 scanner/runner.py \
+          runner=scanner/runner.py
+          if [ "$FLUXOPEN_VERIFY_ONLY" = "true" ]; then runner=scanner/verify_pipeline.py; fi
+          python3 "$runner" \
             --payload "$FLUXOPEN_PAYLOAD" \
             --signature "$FLUXOPEN_SIGNATURE" \
             --expected-id "$FLUXOPEN_SCAN_ID" \
             --output "$RUNNER_TEMP/fluxopen"
       - name: Devolver relatório assinado ao painel Cloudflare
         if: always()
-        continue-on-error: true
         env:
           SCAN_SIGNING_SECRET: ${{ secrets.SCAN_SIGNING_SECRET }}
           FLUXOPEN_CALLBACK_URL: https://fluxopen-security.nutricionistaalmeidavh.workers.dev/api/callback
