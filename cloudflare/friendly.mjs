@@ -161,8 +161,8 @@ export function buildFriendlyReport(report){
   const priorityCount=list.filter(x=>x.priority==="alta").length;
   return{
     version:1,
-    headline:incomplete?"Auditoria incompleta: resultados inconclusivos":list.some(x=>x.priority==="alta"||x.priority==="media")?"Melhorias de segurança recomendadas":list.length?"Pontos para revisão técnica":"Nenhum alerta interpretável nesta análise",
-    assessment:incomplete?
+    headline:failed?"Auditoria incompleta: resultados inconclusivos":list.some(x=>x.priority==="alta"||x.priority==="media")?"Melhorias de segurança recomendadas":list.length?"Pontos para revisão técnica":"Nenhum alerta interpretável nesta análise",
+    assessment:failed?
       "Não é possível emitir uma avaliação geral: uma etapa falhou.":
       list.length?
       "Foram encontradas configurações a revisar. Nenhum achado listado aqui, isoladamente, comprova invasão, vazamento ou uma vulnerabilidade explorada.":
