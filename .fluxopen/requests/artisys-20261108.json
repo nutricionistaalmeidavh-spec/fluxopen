@@ -1,0 +1,13 @@
+{
+  "id": "25d3aad623c8b467bf5c329b614ca01f",
+  "url": "https://artisys.dev/",
+  "mode": "passive",
+  "tools": [
+    "zap",
+    "subfinder",
+    "httpx",
+    "katana",
+    "testssl"
+  ],
+  "expires_utc": "2026-11-10T03:00:00Z"
+}
