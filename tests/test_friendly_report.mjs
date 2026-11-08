@@ -82,3 +82,14 @@ test("resultados desconhecidos permanecem revisão técnica, sem texto imaginado
   assert.equal(x.items[0].priority,"revisar");
   assert.match(x.items[0].description,/scanner|valida/i);
 });
+
+
+test("ferramentas ignoradas nao contam como executadas",()=>{
+  const report=fixture({modules:[{tool:"sqlmap",status:"skipped",excerpt:"Sem query"},{tool:"nuclei",status:"ok",excerpt:""}]});
+  const result=buildFriendlyReport(report);
+  assert.equal(result.executedTools,1);
+  assert.equal(result.skippedTools,1);
+  assert.equal(result.totalTools,2);
+  assert.equal(result.incomplete,true);
+  assert.match(result.caveats.join(" "),/ignorada/i);
+});
