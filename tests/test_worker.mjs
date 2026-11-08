@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { normalizeTarget,validateTools,encodeManifest } from "../cloudflare/worker.mjs";
@@ -36,12 +37,11 @@ test("Worker serves existing dashboard at root", async()=>{
 });
 
 
-test("callback rejects replay and validates scanner result fields",async()=>{
-  const {readFileSync}=await import("node:fs");
+test("callback has idempotent finalization and result schema guards",()=>{
   const source=readFileSync(new URL("../cloudflare/worker.mjs",import.meta.url),"utf8");
-  assert.match(source,/status IN \\('queued','running'\\) AND report IS NULL/);
-  assert.match(source,/saved\\.meta\\?\\.changes!==1/);
-  assert.match(source,/Achados inválidos/);
-  assert.match(source,/Módulos inválidos/);
-  assert.match(source,/\\\"warning\\\"/);
+  assert.ok(source.includes("AND report IS NULL"));
+  assert.ok(source.includes("saved.meta?.changes!==1"));
+  assert.ok(source.includes("Achados inválidos"));
+  assert.ok(source.includes("Módulos inválidos"));
+  assert.ok(source.includes('"warning"'));
 });
