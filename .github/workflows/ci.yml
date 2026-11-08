@@ -23,6 +23,8 @@ jobs:
           Path("/tmp/fluxopen-ui.js").write_text(text.split("<script>",1)[1].split("</script>",1)[0])
           PY
           node --check /tmp/fluxopen-ui.js
+      - name: Testes do Cloudflare Worker
+        run: node --test tests/test_worker.mjs
       - name: Compilação de Python
         run: python3 -m compileall -q security.py app scanner
   scanner_smoke:
