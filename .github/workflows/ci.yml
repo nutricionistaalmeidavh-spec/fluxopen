@@ -25,3 +25,15 @@ jobs:
           node --check /tmp/fluxopen-ui.js
       - name: Compilação de Python
         run: python3 -m compileall -q security.py app scanner
+  scanner_smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build scanners auxiliares (checksums verificados)
+        run: docker build -t fluxopen/misc:ci -f scanner/Dockerfile.misc .
+      - name: Verificar binários sem acessar alvos
+        run: |
+          docker run --rm fluxopen/misc:ci ffuf -V
+          docker run --rm fluxopen/misc:ci feroxbuster --version
+          docker run --rm fluxopen/misc:ci python /opt/sqlmap/sqlmap.py --version
