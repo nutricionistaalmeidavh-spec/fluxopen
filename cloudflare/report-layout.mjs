@@ -3,7 +3,14 @@
  * No browser scripts, remote fonts, external stylesheets or paid dependencies.
  * The original signed report is not modified. Technical evidence stays collapsed.
  */
-const htmlEscape=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function redactEvidence(value){
+  return String(value??"")
+    .replace(/(^|\n)(\s*(?:authorization|cookie|set-cookie|x-api-key)\s*:\s*)[^\r\n]*/gi,"$1$2[OCULTO]")
+    .replace(/(\bBearer\s+)[A-Za-z0-9._~+/-]+/gi,"$1[OCULTO]")
+    .replace(/([?&][A-Za-z0-9_.-]{1,70}=)[^\s&#"'<>]*/g,"$1[OCULTO]")
+    .replace(/(\b(?:password|passwd|token|access_token|api_key|apikey|secret|session|client_secret|jwt|authorization|code)\s*[=:]\s*)[^\s&,"'<>]+/gi,"$1[OCULTO]");
+}
+const htmlEscape=value=>redactEvidence(value).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const safeInt=value=>Number.isFinite(Number(value))?Math.max(0,Math.floor(Number(value))):0;
 function hostFor(report){
   try{return new URL(report.url).hostname.toLowerCase()}catch{return "alvo-desconhecido"}
