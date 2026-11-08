@@ -136,7 +136,7 @@ const nonceCookie=n=>"fluxopen_webauthn="+n+"; Path=/api/passkeys; Max-Age=300; 
 const clearNonce="fluxopen_webauthn=; Path=/api/passkeys; Max-Age=0; Secure; HttpOnly; SameSite=Strict";
 function getNonce(req) {
   const match=(req.headers.get("Cookie")||"").split(";").map(s=>s.trim()).find(s=>s.startsWith("fluxopen_webauthn="));
-  return match?match.slice(19):"";
+  return match?match.slice("fluxopen_webauthn=".length):"";
 }
 async function begin(req,env,purpose,sessionHash=null){
   if(!env.DB)err("Banco D1 indisponível");
