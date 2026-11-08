@@ -68,3 +68,15 @@ Primeiro acesso seguro:
 A criação de passkeys exige uma sessão administrativa válida e proteção CSRF. Verificações server-side: challenge único e expirável, origem HTTPS exata, RP ID, presença e verificação do usuário (Face ID/PIN), algoritmo ES256, assinatura e contador do autenticador. Dados públicos ficam no D1; **nenhum dado biométrico ou chave privada chega ao servidor**.
 
 **Limitação importante:** o e-mail cadastrado serve como identificador do login com senha, mas **não envia links de recuperação nem verifica posse da caixa postal**; recuperar acesso depende do secret administrativo no Cloudflare ou de uma passkey já cadastrada. A chave-senha é associada ao hostname `fluxopen-security.nutricionistaalmeidavh.workers.dev`. Se mudar para um domínio próprio, registre outra chave-senha. O Face ID depende do suporte do Safari/iOS e da configuração de chaves-senha do aparelho.
+
+## Relatório amigável automático — sem custo de IA
+
+O Worker carrega `cloudflare/friendly.mjs` e transforma resultados conhecidos dos scanners em **resumo executivo em português**, prioridades de correção, impacto provável, recomendações e evidências recolhíveis. A interpretação usa um catálogo aberto e determinístico versionado neste repositório: **nenhuma API de IA, cobrança por relatório ou processamento externo**.
+
+- **Histórico:** os relatórios antigos continuam intactos no D1; a apresentação amigável é calculada ao consultar `/api/scans/{id}` ou baixar HTML/JSON, sem migrar/reescrever o relatório assinado.
+- **Futuras execuções:** `scanner/runner.py` preserva o ID e a contagem de alertas ZAP via JSON ou, se o ZAP falhar ao gerar arquivo, via mensagens `WARN-NEW` do log; testssl.sh é analisado pelas seções de `scanResult` do JSON pretty.
+- **Painel e exportação:** cartões explicativos mobile-first, plano de correção, ressalvas e evidências técnicas recolhíveis. O relatório HTML pode ser impresso em PDF pelo navegador.
+- **Segurança da informação:** evidências ficam no D1 autenticado; a lógica do relatório não publica artefatos em GitHub público. Saídas HTML escapam conteúdo não confiável.
+- **Precaução:** avisos de scanner não equivalem a falhas exploráveis confirmadas; ausência de achados não garante segurança. Descoberta de subdomínios não os adiciona automaticamente ao escopo.
+
+Testes: `python3 -m unittest discover -s tests -v`, `node --test tests/test_friendly_report.mjs` e `node --test tests/test_panel_compile.mjs`.
