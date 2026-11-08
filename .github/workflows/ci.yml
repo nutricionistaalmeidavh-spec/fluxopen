@@ -23,8 +23,8 @@ jobs:
           Path("/tmp/fluxopen-ui.js").write_text(text.split("<script>",1)[1].split("</script>",1)[0])
           PY
           node --check /tmp/fluxopen-ui.js
-      - name: Testes do Cloudflare Worker
-        run: node --test tests/test_worker.mjs
+      - name: Testes do Cloudflare Worker e callback assinado
+        run: node --test tests/test_worker.mjs tests/test_callback_integration.mjs
       - name: Testes do relatório amigável e HTML seguro
         run: node --test tests/test_friendly_report.mjs tests/test_friendly_ui.mjs
       - name: Exportação HTML legível no celular e nomes de arquivo amigáveis
@@ -33,8 +33,6 @@ jobs:
         run: node --test tests/test_passkeys.mjs
       - name: Testar recuperação idempotente de auditorias
         run: node --test tests/test_dispatch.mjs
-      - name: Testes do motor de relatórios amigáveis
-        run: node --test tests/test_friendly_report.mjs
       - name: Validar JavaScript do painel Cloudflare
         run: |
           node --test tests/test_panel_compile.mjs
