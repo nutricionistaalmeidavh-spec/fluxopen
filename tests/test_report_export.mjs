@@ -56,3 +56,15 @@ test("domínio inválido não cria caminho ou nome perigoso",()=>{
   const data={...report,url:"https://exemplo.tld:8443/x",ended:null};
   assert.match(friendlyReportFilename(data,"html"),/^FluxOpen_Relatorio_Seguranca_exemplo\.tld_08-11-2026_/);
 });
+
+test("HTML oculta credenciais em evidencias e logs, mantendo alerta tecnico",()=>{
+  const leak={...report,modules:[{tool:"zap",status:"warning",
+    excerpt:"GET https://artisys.dev/admin?token=ABCD123&email=pessoa%40example.com\\nAuthorization: Bearer xyz789\\nCookie: session=private111\\nerror 403"}],
+    findings:[{tool:"zap",rule_id:"10038",title:"Missing CSP",severity:"medium",
+      url:"https://artisys.dev/page?api_key=valuable123",description:"token=private222",
+      urls:["https://artisys.dev/page?code=secret123"]}]};
+  const html=renderFriendlyHtml(leak);
+  for(const secret of ["ABCD123","pessoa%40example.com","xyz789","private111","private222","valuable123","secret123"])assert.ok(!html.includes(secret),secret);
+  assert.match(html,/OCULTO|ocultos/i);
+  assert.match(html,/error 403/);
+});
