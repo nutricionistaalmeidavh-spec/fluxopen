@@ -1,4 +1,5 @@
 import { PANEL_HTML } from "./panel.mjs";
+import { buildFriendlyReport, renderFriendlyHtml } from "./friendly.mjs";
 import { reconcilePending } from "./dispatch.mjs";
 import { registrationOptions, registrationFinish, authenticationOptions, authenticationFinish, identity, setIdentity, checkIdentity } from "./webauthn.mjs";
 /**
@@ -185,7 +186,7 @@ async function refreshRun(env,row) {
     await env.DB.prepare("UPDATE scans SET run_id=?,status=?,updated=? WHERE id=? AND report IS NULL").bind(run.id,running?"running":(epoch()-row.started>180?"failed":"running"),n,row.id).run();
   }catch{ /* Keep last state. The callback will still finalize the scan. */ }
 }
-function parseReport(row) {return row.report?JSON.parse(row.report):null;}
+function parseReport(row) {if(!row.report)return null;const report=JSON.parse(row.report);report.friendly=buildFriendlyReport(report);return report;}
 async function detail(req,env,id) {
   if(!/^[a-f0-9]{32}$/.test(id))fail(404,"Auditoria não encontrada");
   let row=await env.DB.prepare("SELECT * FROM scans WHERE id=?").bind(id).first();
@@ -202,11 +203,11 @@ async function downloadReport(env,id,format) {
   const row=await env.DB.prepare("SELECT report FROM scans WHERE id=?").bind(id).first();
   if(!row||!row.report)fail(404,"Relatório ainda indisponível");
   const report=JSON.parse(row.report);
+  report.friendly=buildFriendlyReport(report);
   const headers={"Content-Disposition":"attachment; filename=\"fluxopen-"+id+"."+format+"\""};
   if(format==="json")return json(report,200,headers);
   if(format!=="html")fail(422,"Formato inválido");
-  const modules=(report.modules||[]).map(t=>"<section><h2>"+escapeHTML(t.tool)+" — "+escapeHTML(t.status)+"</h2><pre>"+escapeHTML(t.excerpt||"")+"</pre></section>").join("");
-  return content("<!doctype html><html lang=\"pt-BR\"><meta charset=\"utf-8\"><title>FluxOpen</title><style>body{font:16px system-ui;max-width:900px;margin:40px auto;padding:24px}section{border-top:1px solid #ddd;padding:14px 0}pre{white-space:pre-wrap;overflow-wrap:anywhere}</style><h1>FluxOpen · Auditoria</h1><p>Alvo: "+escapeHTML(report.url)+"</p><p>Status: "+escapeHTML(report.status)+"</p>"+modules+"</html>",200,headers);
+  return content(renderFriendlyHtml(report),200,headers);
 }
 async function callback(req,env) {
   if(!env.SCAN_SIGNING_SECRET||env.SCAN_SIGNING_SECRET.length<32)fail(503,"Assinatura de retorno não configurada");
