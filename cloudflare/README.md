@@ -54,3 +54,17 @@ resolver DNS, iniciar containers ou acessar o alvo. O relatório inclui
 `verification_only: true`, com todos os módulos marcados como ignorados e uma
 explicação explícita de teste. Isso valida a integração, não a detecção dos scanners.
 Falhas no callback fazem o workflow falhar, evitando sucesso silencioso sem entrega.
+
+## Login automático com Apple Face ID / chave-senha
+
+O painel Cloudflare tem suporte a **passkeys (WebAuthn ES256)**, sem SaaS ou serviço pago.
+
+Primeiro acesso seguro:
+1. Faça uma única entrada com a senha de administrador atual (`ADMIN_PASSWORD` no Cloudflare). Caso não a conheça, substitua o secret `ADMIN_PASSWORD` nas configurações do Worker por uma nova senha de **no mínimo 12 caracteres**.
+2. Abra **Segurança / Face ID** e toque em **Criar chave-senha no iPhone (Face ID)**.
+3. Confirme o Face ID na tela do iOS. Na próxima visita, use **Entrar com Face ID** ou a sugestão automática de chave-senha do Safari.
+4. Opcional: na mesma tela, cadastre um **e-mail e senha próprios** (mínimo 12 caracteres) para login alternativo.
+
+A criação de passkeys exige uma sessão administrativa válida e proteção CSRF. Verificações server-side: challenge único e expirável, origem HTTPS exata, RP ID, presença e verificação do usuário (Face ID/PIN), algoritmo ES256, assinatura e contador do autenticador. Dados públicos ficam no D1; **nenhum dado biométrico ou chave privada chega ao servidor**.
+
+**Limitação importante:** o e-mail cadastrado serve como identificador do login com senha, mas **não envia links de recuperação nem verifica posse da caixa postal**; recuperar acesso depende do secret administrativo no Cloudflare ou de uma passkey já cadastrada. A chave-senha é associada ao hostname `fluxopen-security.nutricionistaalmeidavh.workers.dev`. Se mudar para um domínio próprio, registre outra chave-senha. O Face ID depende do suporte do Safari/iOS e da configuração de chaves-senha do aparelho.
