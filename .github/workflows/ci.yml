@@ -51,7 +51,7 @@ jobs:
     steps:
       - name: Diagnosticar callback Cloudflare sem varredura
         env:
-          SCAN_SIGNING_SECRET: \${{ secrets.SCAN_SIGNING_SECRET }}
+          SCAN_SIGNING_SECRET: ${{ secrets.SCAN_SIGNING_SECRET }}
         run: |
           python3 - <<'PY'
           import hashlib,hmac,json,os,urllib.request,urllib.error
