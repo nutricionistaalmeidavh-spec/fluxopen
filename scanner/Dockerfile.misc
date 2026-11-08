@@ -1,0 +1,11 @@
+# Dedicated low-resource helper image for FFUF, Feroxbuster and SQLmap.
+# Release archives verified against publisher's SHA-256 fingerprints.
+FROM python:3.12-slim
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl git tar && rm -rf /var/lib/apt/lists/*
+RUN git clone --depth=1 https://github.com/sqlmapproject/sqlmap.git /opt/sqlmap
+RUN curl -fLsS https://github.com/ffuf/ffuf/releases/download/v2.3.0/ffuf_2.3.0_linux_amd64.tar.gz -o /tmp/ffuf.tgz && \
+    echo "b2a3c725fcb9da175159682f54d6e9149f2905b00d84d155e7efc5d599975ceb  /tmp/ffuf.tgz" | sha256sum -c - && \
+    tar -xzf /tmp/ffuf.tgz -C /usr/local/bin ffuf && chmod +x /usr/local/bin/ffuf
+RUN curl -fLsS https://github.com/epi052/feroxbuster/releases/download/v2.13.1/x86_64-linux-feroxbuster.tar.gz -o /tmp/ferox.tgz && \
+    echo "7985c00e6803b0f25d5e9139f7472279f3f4d891429627a5cedc629e53992d80  /tmp/ferox.tgz" | sha256sum -c - && \
+    tar -xzf /tmp/ferox.tgz -C /usr/local/bin feroxbuster && chmod +x /usr/local/bin/feroxbuster

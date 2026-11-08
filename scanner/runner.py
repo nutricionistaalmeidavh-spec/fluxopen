@@ -1,0 +1,230 @@
+"""Run signed, low-rate scans in isolated Docker containers and normalize evidence."""
+import argparse
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+import time
+from urllib.parse import urlsplit
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+from security import verify_manifest, ACTIVE  # noqa: E402
+
+IMAGES = {
+    "zap": "ghcr.io/zaproxy/zaproxy:stable",
+    "nuclei": "projectdiscovery/nuclei:latest",
+    "subfinder": "projectdiscovery/subfinder:latest",
+    "httpx": "projectdiscovery/httpx:latest",
+    "katana": "projectdiscovery/katana:latest",
+    "testssl": "ghcr.io/testssl/testssl.sh:latest",
+    "nikto": "ghcr.io/sullo/nikto:latest",
+    "ffuf": "fluxopen/misc:local",
+    "feroxbuster": "fluxopen/misc:local",
+    "sqlmap": "fluxopen/misc:local",
+}
+TIMEOUTS = {"zap": 360, "nuclei": 300, "subfinder": 120, "httpx": 90,
+            "katana": 180, "ffuf": 150, "feroxbuster": 180,
+            "sqlmap": 240, "testssl": 360, "nikto": 210}
+MISC = {"ffuf", "feroxbuster", "sqlmap"}
+
+def command(tool, target, host):
+    """Arguments are lists, never shells; scope remains the single input host."""
+    if tool == "zap":
+        return ["zap-baseline.py", "-t", target, "-m", "1", "-I",
+                "-J", "/zap/wrk/zap.json", "-r", "/zap/wrk/zap.html"]
+    if tool == "nuclei":
+        return ["-u", target, "-jsonl", "-o", "/out/nuclei.jsonl", "-rl", "2",
+                "-c", "1", "-timeout", "8", "-retries", "0", "-ni",
+                "-etags", "dos,stress,fuzz", "-severity", "medium,high,critical"]
+    if tool == "subfinder":
+        return ["-d", host, "-silent", "-o", "/out/subfinder.txt"]
+    if tool == "httpx":
+        return ["-u", target, "-json", "-silent", "-o", "/out/httpx.jsonl"]
+    if tool == "katana":
+        return ["-u", target, "-d", "1", "-rl", "2", "-c", "1", "-silent",
+                "-jsonl", "-fs", "fqdn", "-o", "/out/katana.jsonl"]
+    if tool == "ffuf":
+        return ["ffuf", "-u", target.rstrip("/") + "/FUZZ",
+                "-w", "/out/wordlist.txt", "-rate", "2", "-t", "1",
+                "-timeout", "10", "-maxtime", "120", "-of", "json",
+                "-o", "/out/ffuf.json", "-s"]
+    if tool == "feroxbuster":
+        return ["feroxbuster", "-u", target, "-w", "/out/wordlist.txt",
+                "--rate-limit", "2", "--threads", "1", "--depth", "1",
+                "--no-recursion", "--json", "--output", "/out/feroxbuster.jsonl",
+                "--time-limit", "2m", "--quiet"]
+    if tool == "sqlmap":
+        return ["python", "/opt/sqlmap/sqlmap.py", "-u", target, "--batch",
+                "--smart", "--level", "1", "--risk", "1", "--threads", "1",
+                "--timeout", "8", "--retries", "0", "--technique", "BE",
+                "--output-dir", "/out/sqlmap"]
+    if tool == "testssl":
+        return ["--fast", "--quiet", "--color", "0", "--jsonfile-pretty",
+                "/out/testssl.json", target]
+    if tool == "nikto":
+        return ["-h", target, "-timeout", "10s", "-maxtime", "2m",
+                "-output", "/tmp/nikto.json", "-Format", "json"]
+    raise ValueError("Scanner não reconhecido")
+
+def docker_args(tool, root):
+    base = ["docker", "run", "--rm", "--init", "--pids-limit", "256",
+            "--memory", "1024m", "--cpus", "1", "--cap-drop", "ALL",
+            "--security-opt", "no-new-privileges", "--network", "bridge"]
+    if tool == "zap":
+        base += ["-v", str(root) + ":/zap/wrk"]
+    elif tool == "nikto":
+        base += ["-v", str(root) + ":/tmp"]
+    else:
+        base += ["-v", str(root) + ":/out"]
+    return base + [IMAGES[tool]]
+
+def parse_jsonl(path, max_rows=100):
+    if not path.exists():
+        return []
+    result = []
+    with path.open(errors="replace") as handle:
+        for line in handle:
+            if len(result) >= max_rows:
+                break
+            try:
+                result.append(json.loads(line))
+            except (ValueError, json.JSONDecodeError):
+                pass
+    return result
+
+def normalize_findings(tool, root):
+    findings = []
+    if tool == "nuclei":
+        for item in parse_jsonl(root / "nuclei.jsonl"):
+            meta = item.get("info", {})
+            findings.append({"tool": tool, "severity": str(meta.get("severity", "info")).lower(),
+                "title": str(meta.get("name", item.get("template-id", "Nuclei")))[:180],
+                "url": str(item.get("matched-at", ""))[:500],
+                "description": str(item.get("template-id", ""))[:300]})
+    elif tool == "zap" and (root / "zap.json").exists():
+        try:
+            data = json.loads((root / "zap.json").read_text(errors="replace"))
+            for site in data.get("site", []):
+                for alert in site.get("alerts", []):
+                    level = str(alert.get("riskdesc", "info")).split(" ")[0].lower()
+                    findings.append({"tool": tool, "severity": level,
+                        "title": str(alert.get("name", ""))[:180],
+                        "url": str(site.get("@name", ""))[:500],
+                        "description": str(alert.get("desc", ""))[:600]})
+        except (ValueError, OSError):
+            pass
+    elif tool == "testssl" and (root / "testssl.json").exists():
+        try:
+            items = json.loads((root / "testssl.json").read_text(errors="replace"))
+            for item in items if isinstance(items, list) else []:
+                sev = str(item.get("severity", "info")).lower()
+                if sev in ("high", "critical", "medium", "low", "warning"):
+                    findings.append({"tool": tool, "severity": sev,
+                        "title": str(item.get("id", "TLS"))[:180],
+                        "url": str(item.get("ip", ""))[:200],
+                        "description": str(item.get("finding", ""))[:400]})
+        except (ValueError, OSError):
+            pass
+    return findings[:150]
+
+def excerpt(root, tool, stdout):
+    """Preview the tool's actual structured output, not just console chatter."""
+    filenames = {
+        "zap": "zap.json", "nuclei": "nuclei.jsonl",
+        "subfinder": "subfinder.txt", "httpx": "httpx.jsonl",
+        "katana": "katana.jsonl", "ffuf": "ffuf.json",
+        "feroxbuster": "feroxbuster.jsonl", "testssl": "testssl.json",
+        "nikto": "nikto.json",
+    }
+    filename = filenames.get(tool)
+    preview = ""
+    if filename:
+        path = root / filename
+        if path.exists() and path.is_file():
+            try:
+                with path.open("r", errors="replace") as stream:
+                    preview = stream.read(8000)
+            except OSError:
+                pass
+    log = (stdout or "")[-2000:]
+    return (("Dados de " + filename + ":\\n" + preview + "\\n") if preview else "") + log
+
+def execute(tool, target, host, root):
+    began = time.time()
+    if tool == "testssl" and urlsplit(target).scheme != "https":
+        return dict(tool=tool, status="skipped", seconds=0, excerpt="TLS não se aplica a uma URL HTTP.")
+    if tool == "sqlmap" and not urlsplit(target).query:
+        return dict(tool=tool, status="skipped", seconds=0,
+                    excerpt="Sem parâmetro de query na URL. SQLmap não tentará descobrir formulários ou outras URLs.")
+    command_line = docker_args(tool, root) + command(tool, target, host)
+    try:
+        result = subprocess.run(command_line, cwd=ROOT, text=True,
+                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                timeout=TIMEOUTS[tool], check=False, errors="replace")
+        log = result.stdout[-60000:]
+        (root / (tool + ".log")).write_text(log)
+        status = "ok" if result.returncode == 0 else "warning"
+        if result.returncode in (125, 126, 127):
+            status = "error"
+        return dict(tool=tool, status=status, code=result.returncode,
+                    seconds=round(time.time() - began, 1), excerpt=excerpt(root, tool, log))
+    except subprocess.TimeoutExpired:
+        return dict(tool=tool, status="error", seconds=round(time.time() - began, 1),
+                    excerpt="Tempo limite atingido; execução interrompida.")
+    except (OSError, ValueError) as exc:
+        return dict(tool=tool, status="error", seconds=round(time.time() - began, 1),
+                    excerpt="Falha ao iniciar: " + str(exc)[:400])
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--payload", required=True)
+    parser.add_argument("--signature", required=True)
+    parser.add_argument("--output", required=True)
+    parser.add_argument("--expected-id", default="")
+    args = parser.parse_args()
+    secret = os.environ.get("SCAN_SIGNING_SECRET", "")
+    manifest = verify_manifest(args.payload, args.signature, secret, resolve=True)
+    if args.expected_id and args.expected_id != manifest["id"]:
+        raise ValueError("scan_id não corresponde ao manifesto assinado")
+    output = Path(args.output).resolve()
+    output.mkdir(parents=True, exist_ok=True)
+    output.chmod(0o777)  # Official images run under different non-root UIDs.
+    (output / "wordlist.txt").write_text((ROOT / "scanner" / "wordlist.txt").read_text())
+    started = int(time.time())
+    report = {"id": manifest["id"], "url": manifest["url"], "mode": manifest["mode"],
+              "started": started, "ended": None, "status": "running",
+              "modules": [], "findings": []}
+    try:
+        if any(tool in MISC for tool in manifest["tools"]):
+            built = subprocess.run(["docker", "build", "-t", "fluxopen/misc:local",
+                                    "-f", "scanner/Dockerfile.misc", "."],
+                                   cwd=ROOT, capture_output=True, text=True, timeout=600)
+            if built.returncode:
+                print("Erro ao construir imagem auxiliar:", built.stderr[-2000:], flush=True)
+        host = urlsplit(manifest["url"]).hostname
+        for tool in manifest["tools"]:
+            # Repeat DNS check to limit stale resolver data before every tool.
+            from security import normalize_target
+            try:
+                normalize_target(manifest["url"], resolve=True)
+                result = execute(tool, manifest["url"], host, output)
+            except ValueError as exc:
+                result = dict(tool=tool, status="error", seconds=0, excerpt=str(exc))
+            result["findings"] = normalize_findings(tool, output)
+            report["findings"].extend(result.pop("findings"))
+            report["modules"].append(result)
+            print(tool + ": " + result["status"], flush=True)
+            (output / "progress.json").write_text(json.dumps(report, ensure_ascii=False))
+    finally:
+        report["ended"] = int(time.time())
+        successes = sum(m["status"] in ("ok", "warning", "skipped") for m in report["modules"])
+        errors = sum(m["status"] == "error" for m in report["modules"])
+        report["status"] = "failed" if not successes else ("completed_with_errors" if errors else "completed")
+        report["findings"] = report["findings"][:200]
+        (output / "report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2))
+    return 0 if report["status"] != "failed" else 1
+
+if __name__ == "__main__":
+    sys.exit(main())

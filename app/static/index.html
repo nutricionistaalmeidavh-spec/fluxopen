@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0b111b">
+<title>FluxOpen · Security Operations</title>
+<style>
+:root{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color-scheme:dark;--bg:#090e16;--panel:#111925;--panel2:#151f2d;--line:#283549;--txt:#edf4fb;--muted:#9daec0;--brand:#50c3bc;--brand2:#86e3b8;--red:#ff8f96;--orange:#ffd18b;--radius:17px}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:radial-gradient(ellipse at 85% 0%,#12303a 0,transparent 32%),var(--bg);color:var(--txt);min-height:100vh}button,input,textarea,select{font:inherit}button{cursor:pointer}button:disabled{opacity:.5;cursor:not-allowed}a{color:inherit;text-decoration:none}:focus-visible{outline:2px solid var(--brand);outline-offset:3px}
+.layout{min-height:100vh;display:grid;grid-template-columns:252px minmax(0,1fr)}aside{border-right:1px solid var(--line);background:#0d1520;padding:26px 18px;display:flex;flex-direction:column;gap:28px}aside .brand{display:flex;align-items:center;gap:12px;padding:0 12px;font-size:21px;font-weight:750;letter-spacing:-.7px}.logo{width:35px;height:35px;display:grid;place-items:center;border:1px solid #387a78;border-radius:11px;background:#163538;color:#90fff0;font-weight:850;font-size:18px}.submark{font-size:10px;letter-spacing:2px;color:var(--muted);margin:5px 0 0}.nav{display:flex;flex-direction:column;gap:5px}.nav button{padding:12px 14px;background:transparent;border:1px solid transparent;border-radius:11px;color:#a8b7c9;display:flex;align-items:center;gap:11px;text-align:left}.nav button.active,.nav button:hover{color:white;background:#1a2936;border-color:#284956}.nav .symbol{font-size:17px;line-height:1}.aside-bottom{margin-top:auto;padding:18px 12px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);line-height:1.7}
+main{min-width:0;padding:30px clamp(16px,4vw,58px) 68px;max-width:1550px;width:100%;margin:0 auto}.topbar{display:flex;align-items:center;justify-content:space-between;gap:15px;padding-bottom:26px;border-bottom:1px solid var(--line)}.eyebrow{color:var(--brand);letter-spacing:2px;text-transform:uppercase;font-size:11px;font-weight:800}.topbar p{color:var(--muted);font-size:13px;margin:6px 0 0}.account{display:flex;align-items:center;gap:12px}.pill{font-size:11px;letter-spacing:.4px;font-weight:700;border:1px solid #266358;background:#0f3430;color:#8cedcd;border-radius:100px;padding:8px 11px;white-space:nowrap}.logout{background:none;border:1px solid var(--line);border-radius:10px;padding:9px 12px;color:#cbd6e0}
+h1,h2,h3{letter-spacing:-.8px}h1{font-size:clamp(27px,3vw,38px);margin:24px 0 8px}h2{font-size:19px;margin:0}h3{font-size:15px;margin:0}p{line-height:1.55}.muted{color:var(--muted)}.intro{display:flex;align-items:end;justify-content:space-between;gap:15px;margin-bottom:25px}.intro p{margin:0;font-size:14px}.btn{border-radius:11px;border:1px solid #327d7b;background:linear-gradient(110deg,#2f8f8a,#21716f);padding:12px 18px;color:#fff;font-weight:700;display:inline-flex;align-items:center;justify-content:center;gap:9px;transition:filter .2s}.btn:hover{filter:brightness(1.14)}.btn.secondary{background:transparent;border-color:#385065;color:#dae8f4}.btn.small{padding:8px 13px;font-size:12px}.btn.danger{background:#33212a;border-color:#6c343f;color:#ffb5b5}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px;margin:19px 0 22px}.stat,.panel{background:linear-gradient(145deg,#141e2c,#101823);border:1px solid #29384a;border-radius:var(--radius)}.stat{padding:19px 20px}.stat .metric{font-size:30px;font-weight:760;margin:8px 0 2px;letter-spacing:-1px}.stat .label{font-size:12px;color:var(--muted)}.stat .mini{font-size:11px;color:#70c9bf}.panel{padding:24px;margin:18px 0}.panelhead{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:21px}.panelhead p{font-size:13px;color:var(--muted);margin:5px 0 0}.section-label{display:block;font-size:11px;color:#86a7bf;letter-spacing:1.4px;font-weight:800;text-transform:uppercase;margin-bottom:9px}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:16px}.formfield{display:flex;flex-direction:column;gap:7px;margin-bottom:17px}label{font-size:13px;color:#cad7e5;font-weight:600}input:not([type=checkbox]),textarea,select{background:#0c1521;border:1px solid #35465a;color:var(--txt);padding:13px 14px;border-radius:10px;width:100%;outline:0}input:focus,select:focus,textarea:focus{border-color:#58c3b8;box-shadow:0 0 0 2px #42b3ac2a}input::placeholder,textarea::placeholder{color:#708498}textarea{min-height:86px;resize:vertical}select{cursor:pointer}.toolgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px}.tool{position:relative;text-align:left;border:1px solid #334457;background:#0d1724;border-radius:12px;padding:13px 11px;color:var(--txt);min-height:92px}.tool.on{border-color:#3aa69f;background:#123034}.tool .name{font-weight:750;font-size:13px;display:block}.tool .hint{color:var(--muted);font-size:11px;display:block;margin-top:7px;line-height:1.35}.tool .check{position:absolute;right:9px;top:8px;color:#60e1bc;font-size:13px}.tool:disabled{opacity:.42}.modebar{display:flex;gap:8px;margin:18px 0}.mode{background:#0c1521;border:1px solid var(--line);border-radius:9px;padding:10px 16px;font-size:13px;color:var(--muted)}.mode.on{color:#fff;background:#173532;border-color:#377b72}.safety{border:1px solid #596043;background:#292b1c;border-radius:12px;padding:14px 16px;margin-top:16px;color:#e7d7a6;font-size:12px;line-height:1.55}.confirm{display:flex;align-items:flex-start;gap:10px;color:#c3d0da;margin:15px 0;font-size:13px}.confirm input{width:17px;height:17px;accent-color:var(--brand);margin-top:2px}.confirm label{font-weight:500;line-height:1.6}.panelactions{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-top:22px}.panelactions small{font-size:12px;color:var(--muted)}
+.tablewrap{overflow:auto}.data-table{width:100%;border-collapse:collapse;min-width:640px;text-align:left}.data-table th{color:#879eb4;font-size:11px;text-transform:uppercase;letter-spacing:1.1px;padding:12px 10px;border-bottom:1px solid var(--line)}.data-table td{padding:15px 10px;border-bottom:1px solid #233042;font-size:13px}.data-table tr:last-child td{border-bottom:0}.data-table tr:hover td{background:#182332}.linkbtn{background:none;border:0;color:#7de2d6;font-weight:700;font-size:12px;text-decoration:underline;text-underline-offset:3px}.status{display:inline-block;border-radius:100px;font-size:11px;font-weight:700;padding:6px 10px;border:1px solid #40526a;color:#c5d6e5;background:#1b2a3b}.status.completed{border-color:#2f6556;color:#9ceac4;background:#153b30}.status.completed_with_errors,.status.warning{color:#f4d09a;border-color:#5b4a2c;background:#382d20}.status.failed{color:#f4aaa9;border-color:#633b42;background:#381d25}.status.running{color:#98bffa;background:#1c314a}
+.empty{border:1px dashed #344b60;border-radius:12px;padding:37px;text-align:center;color:var(--muted);font-size:13px}.empty strong{display:block;color:var(--txt);margin-bottom:5px;font-size:15px}.hidden{display:none!important}.view{display:none}.view.active{display:block}.detailtop{display:flex;justify-content:space-between;align-items:start;gap:18px;margin-bottom:20px}.finding{padding:14px;border:1px solid var(--line);border-radius:12px;margin:10px 0;background:#0c1622}.finding .title{font-size:14px;font-weight:750;margin:8px 0}.finding .note{font-size:12px;color:var(--muted);overflow-wrap:anywhere}.sev{font-size:10px;display:inline-block;letter-spacing:.5px;text-transform:uppercase;font-weight:850;border-radius:7px;border:1px solid #476274;padding:4px 8px;color:#d5e8f3}.sev.high,.sev.critical{color:#ffada9;border-color:#9a4b4c}.sev.medium{color:#ffd09a;border-color:#765539}.modules{display:grid;grid-template-columns:1fr 1fr;gap:12px}details{border:1px solid var(--line);border-radius:12px;background:#0d1824;overflow:hidden}details summary{list-style:none;cursor:pointer;padding:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:13px;font-weight:750}details summary::-webkit-details-marker{display:none}details pre{margin:0;padding:15px;background:#07101b;overflow:auto;white-space:pre-wrap;word-break:break-word;font-size:11px;line-height:1.6;max-height:380px;color:#b9cde0}details .status{margin-left:auto}.toast{position:fixed;z-index:20;right:20px;bottom:20px;max-width:450px;box-shadow:0 15px 40px #0009;background:#172d37;border:1px solid #43746b;color:white;border-radius:12px;padding:14px 18px;font-size:13px}.toast.error{background:#3a202a;border-color:#9b4d59}
+.loginback{position:fixed;inset:0;display:grid;place-items:center;background:#071019ef;z-index:30;padding:20px}.loginbox{width:min(440px,100%);padding:37px;border:1px solid #34505e;background:#121f2c;border-radius:21px;box-shadow:0 35px 80px #0009}.loginbox h1{margin:12px 0 5px}.loginbox .logo{width:46px;height:46px}.loginbox p{font-size:13px;color:var(--muted)}.loginbox .btn{width:100%;margin-top:6px}.loginbox label{margin:15px 0 8px;display:block}.footer{padding:20px 0;color:#71869b;font-size:11px;text-align:center}
+@media(max-width:1180px){.toolgrid{grid-template-columns:repeat(3,minmax(0,1fr))}.stats{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:760px){.layout{display:block}aside{position:sticky;top:0;z-index:5;padding:12px 15px;display:flex;flex-direction:row;align-items:center;gap:10px;overflow:auto}aside .brand{padding:0;font-size:15px;flex-shrink:0}aside .logo{height:30px;width:30px;font-size:15px}aside .submark,.aside-bottom{display:none}.nav{flex-direction:row;white-space:nowrap;overflow:auto}.nav button{padding:9px 10px;font-size:12px}.nav .symbol{display:none}main{padding:14px 15px 55px}.topbar{padding:12px 0 18px}.topbar p{display:none}.account{gap:7px}.stats{gap:9px}.stat{padding:16px}.stat .metric{font-size:25px}.split{grid-template-columns:1fr}.toolgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.tool{min-height:82px}.panel{padding:16px}.intro{align-items:flex-start;flex-direction:column}.modules{grid-template-columns:1fr}.detailtop{flex-direction:column}h1{margin-top:20px}}
+</style>
+</head>
+<body>
+<div class="loginback" id="loginback">
+  <form class="loginbox" id="loginform">
+    <div class="logo">F</div><h1>FluxOpen</h1>
+    <p>Painel privado de auditorias web. Entre com a senha administrativa para gerenciar alvos e execuções.</p>
+    <label for="password">Senha do administrador</label>
+    <input id="password" type="password" autocomplete="current-password" required placeholder="Sua senha">
+    <button class="btn" type="submit">Entrar no painel</button>
+    <p id="loginerror" role="alert"></p>
+  </form>
+</div>
+<div class="layout" id="application">
+<aside>
+  <div class="brand"><div class="logo">F</div><div>FluxOpen<div class="submark">SECURITY LAB</div></div></div>
+  <nav class="nav" aria-label="Navegação principal">
+    <button data-view="dashboard" class="active"><span class="symbol">◫</span>Visão geral</button>
+    <button data-view="targets"><span class="symbol">◎</span>Alvos autorizados</button>
+    <button data-view="history"><span class="symbol">▤</span>Execuções</button>
+  </nav>
+  <div class="aside-bottom"><span class="pill">● Núcleo open source</span><p>10 módulos de segurança web.<br>Somente alvos com autorização explícita.</p></div>
+</aside>
+<main>
+  <div class="topbar">
+    <div><div class="eyebrow">Security operations / Control center</div><p>Auditoria de sites e APIs, com escopo e evidências centralizados.</p></div>
+    <div class="account"><span class="pill" id="backendbadge">Conectando</span><button class="logout" id="logout">Sair</button></div>
+  </div>
+  <section class="view active" id="view-dashboard">
+    <div class="intro"><div><h1>Central de auditorias</h1><p class="muted">Escolha o alvo, defina os scanners e acompanhe os resultados.</p></div><button class="btn secondary small" id="goTarget">+ Cadastrar alvo</button></div>
+    <div class="stats">
+      <div class="stat"><div class="label">Alvos autorizados</div><div class="metric" id="s-targets">0</div><div class="mini">Domínios cadastrados</div></div>
+      <div class="stat"><div class="label">Auditorias executadas</div><div class="metric" id="s-scans">0</div><div class="mini">Últimas 100</div></div>
+      <div class="stat"><div class="label">Em andamento</div><div class="metric" id="s-running">0</div><div class="mini">Fila de execução</div></div>
+      <div class="stat"><div class="label">Concluídas</div><div class="metric" id="s-completed">0</div><div class="mini">Relatórios disponíveis</div></div>
+    </div>
+    <div class="panel" id="newscan">
+      <div class="panelhead"><div><h2>Nova auditoria</h2><p>Todos os módulos compartilham o mesmo alvo e relatório.</p></div><span class="pill">Escopo controlado</span></div>
+      <form id="scanform">
+        <div class="formfield"><label for="scanTarget">01 / Alvo autorizado</label><select id="scanTarget" required><option value="">Cadastre um alvo primeiro</option></select></div>
+        <span class="section-label">02 / Perfil de execução</span>
+        <div class="modebar"><button type="button" class="mode on" data-mode="passive">Conservador</button><button type="button" class="mode" data-mode="active">Ativo controlado</button></div>
+        <div class="panelhead" style="margin-top:20px;margin-bottom:12px"><span class="section-label" style="margin:0">03 / Selecione ferramentas</span><button type="button" class="btn secondary small" id="selectAll">Selecionar os 10 módulos</button></div>
+        <div class="toolgrid" id="tools"></div>
+        <div class="safety" id="safeNotice">Perfil conservador: reconhecimento, coleta de endpoints, avaliação TLS e ZAP Baseline. Ainda gera tráfego; respeite os limites autorizados.</div>
+        <div class="confirm hidden" id="activeConfirm"><input id="confirmActive" type="checkbox"><label for="confirmActive">Confirmo que a autorização cobre testes ativos com fuzzing, varredura de diretórios e sondagem de parâmetros neste domínio.</label></div>
+        <div class="panelactions"><small>Limites por scanner, tempos máximos e resultados registrados.</small><button type="submit" class="btn" id="startScan">▶ Disparar auditoria</button></div>
+      </form>
+    </div>
+    <div class="panel"><div class="panelhead"><div><h2>Últimas execuções</h2><p>Abra uma auditoria para consultar achados e logs.</p></div><button class="btn secondary small" id="refresh">Atualizar</button></div><div id="recent"></div></div>
+  </section>
+  <section class="view" id="view-targets">
+    <div class="intro"><div><h1>Alvos autorizados</h1><p class="muted">Um cadastro central para todas as ferramentas.</p></div></div>
+    <div class="panel">
+      <div class="panelhead"><div><h2>Novo alvo</h2><p>Cadastre somente hosts que você tem permissão de auditar.</p></div><span class="pill">Acesso restrito</span></div>
+      <form id="targetform">
+      <div class="split"><div class="formfield"><label for="targetName">Nome / Cliente</label><input id="targetName" maxlength="80" minlength="2" placeholder="Ex.: Ambiente de homologação" required></div><div class="formfield"><label for="targetUrl">URL exata do alvo</label><input id="targetUrl" type="url" placeholder="https://homologacao.seudominio.com" required></div></div>
+      <div class="split"><div class="formfield"><label for="validUntil">Permissão válida até</label><input id="validUntil" type="date" required></div><div class="formfield"><label for="permission">Referência da autorização / Escopo</label><textarea id="permission" minlength="15" maxlength="500" required placeholder="Ex.: Contrato de pentest #123; todo o host autorizado, horários e contato."></textarea></div></div>
+      <div class="safety">Por segurança, somente domínios públicos HTTP(S), sem IPs privados, login na URL ou portas arbitrárias. Descobertas de subdomínios não entram automaticamente no escopo de varredura.</div>
+      <div class="confirm"><input id="confirmTarget" type="checkbox" required><label for="confirmTarget">Declaro possuir autorização explícita e vigente para testar este host, incluindo o escopo que registrei acima.</label></div>
+      <div class="panelactions"><small>A autorização fica registrada na base local do painel.</small><button type="submit" class="btn">+ Salvar alvo</button></div>
+      </form>
+    </div>
+    <div class="panel"><div class="panelhead"><h2>Domínios cadastrados</h2></div><div id="targetsTable"></div></div>
+  </section>
+  <section class="view" id="view-history">
+    <div class="intro"><div><h1>Execuções e relatórios</h1><p class="muted">Acompanhe status e evidências sem sair do painel.</p></div></div>
+    <div class="panel"><div class="panelhead"><h2>Histórico</h2><button class="btn secondary small" id="refreshHistory">Atualizar</button></div><div id="historyTable"></div></div>
+  </section>
+  <section class="view" id="view-detail">
+    <div class="intro"><div><h1>Relatório de auditoria</h1><p class="muted">Resultado centralizado por módulo e severidade.</p></div><button class="btn secondary small" id="backHistory">← Execuções</button></div>
+    <div class="panel" id="detailContent"><div class="empty">Carregando relatório…</div></div>
+  </section>
+  <div class="footer">FluxOpen · Core gratuito e open source · Nunca execute sem autorização.</div>
+</main>
+</div>
+<div id="toast" role="status" class="toast hidden"></div>
+<script>
+(() => {
+"use strict";
+const TOOLS=[
+  ["zap","ZAP Baseline","Análise web passiva",false],
+  ["nuclei","Nuclei","Templates de CVEs",true],
+  ["subfinder","Subfinder","Subdomínios passivos",false],
+  ["httpx","httpx","HTTP e tecnologia",false],
+  ["katana","Katana","Crawling superficial",false],
+  ["ffuf","FFUF","Fuzzing limitado",true],
+  ["feroxbuster","Feroxbuster","Diretórios e arquivos",true],
+  ["sqlmap","SQLmap","Parâmetros SQL",true],
+  ["testssl","testssl.sh","TLS e HTTPS",false],
+  ["nikto","Nikto","Servidor web",true]
+];
+let csrf="",targets=[],scans=[],mode="passive",selected=new Set(TOOLS.filter(t=>!t[3]).map(t=>t[0])),detailId=null;
+const $=(id)=>document.getElementById(id);
+const esc=(s)=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function toast(message,error=false){const el=$("toast");el.textContent=message;el.className="toast"+(error?" error":"");clearTimeout(window._toastTimer);window._toastTimer=setTimeout(()=>el.classList.add("hidden"),4800)}
+async function api(url,method="GET",body){
+  const opts={method,credentials:"same-origin",headers:{"Accept":"application/json"}};
+  if(method!=="GET")opts.headers["X-CSRF-Token"]=csrf;
+  if(body!==undefined){opts.headers["Content-Type"]="application/json";opts.body=JSON.stringify(body)}
+  let response;try{response=await fetch(url,opts)}catch(e){throw Error("Servidor indisponível: "+e.message)}
+  let data;try{data=await response.json()}catch{throw Error("Resposta inesperada do servidor")}
+  if(!response.ok){if(response.status===401){$("loginback").classList.remove("hidden");}throw Error(typeof data.detail==="string"?data.detail:JSON.stringify(data.detail||"Erro na requisição"))}
+  return data;
+}
+function route(view){document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active",v.id==="view-"+view));document.querySelectorAll(".nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===view));window.scrollTo({top:0,behavior:"smooth"})}
+document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>route(b.dataset.view));
+$("goTarget").onclick=()=>route("targets");$("backHistory").onclick=()=>route("history");
+$("loginform").addEventListener("submit",async e=>{e.preventDefault();$("loginerror").textContent="";try{const r=await api("/api/login","POST",{password:$("password").value});csrf=r.csrf;$("password").value="";$("loginback").classList.add("hidden");await load()}catch(err){$("loginerror").textContent=err.message}});
+$("logout").onclick=async()=>{try{await api("/api/logout","POST",{})}catch{}csrf="";$("loginback").classList.remove("hidden")};
+function renderTools(){const grid=$("tools");grid.innerHTML=TOOLS.map(([id,name,desc,active])=>{const on=selected.has(id);return '<button type="button" class="tool '+(on?"on":"")+'" data-tool="'+id+'" aria-pressed="'+on+'"><span class="name">'+esc(name)+'</span><span class="hint">'+esc(desc)+'</span><span class="check">'+(on?"✓":"+")+'</span></button>'}).join("");
+grid.querySelectorAll("button").forEach(b=>b.onclick=()=>{const id=b.dataset.tool;const active=TOOLS.find(t=>t[0]===id)[3];if(active&&mode==="passive"){toast("Ative o perfil controlado para usar "+id,true);return}selected.has(id)?selected.delete(id):selected.add(id);renderTools()});
+$("safeNotice").textContent=mode==="passive"?"Perfil conservador: reconhecimento, coleta de endpoints, avaliação TLS e ZAP Baseline. Ainda gera tráfego; respeite os limites autorizados.":"Perfil ativo: FFUF, Feroxbuster, SQLmap, Nikto e Nuclei podem gerar requisições de teste. Use apenas com autorização específica e janela combinada.";
+$("activeConfirm").classList.toggle("hidden",mode!=="active");
+document.querySelectorAll("[data-mode]").forEach(b=>b.classList.toggle("on",b.dataset.mode===mode));
+}
+document.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>{mode=b.dataset.mode;if(mode==="passive")selected=new Set([...selected].filter(s=>TOOLS.find(t=>t[0]===s)[3]===false));renderTools()});
+$("selectAll").onclick=()=>{mode="active";selected=new Set(TOOLS.map(t=>t[0]));renderTools();toast("10 ferramentas selecionadas. Confirme a autorização para testes ativos.")};
+function status(s){const label={queued:"Na fila",running:"Executando",completed:"Concluída",completed_with_errors:"Com avisos",failed:"Falhou"};return '<span class="status '+esc(s)+'">'+esc(label[s]||s)+'</span>'}
+function shortDate(n){return new Date(n*1000).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"})}
+function scanTable(rows){if(!rows.length)return '<div class="empty"><strong>Nenhuma execução ainda</strong>Cadastre um alvo e dispare a primeira auditoria.</div>';return '<div class="tablewrap"><table class="data-table"><thead><tr><th>Alvo</th><th>Ferramentas</th><th>Início</th><th>Status</th><th>Relatório</th></tr></thead><tbody>'+rows.map(s=>'<tr><td><strong>'+esc(s.target_name||s.url)+'</strong><br><span class="muted">'+esc(s.url)+'</span></td><td>'+s.tools.length+' módulos</td><td>'+shortDate(s.started)+'</td><td>'+status(s.status)+'</td><td><button class="linkbtn" data-scan="'+esc(s.id)+'">Visualizar →</button></td></tr>').join("")+'</tbody></table></div>'}
+function render(){ $("s-targets").textContent=targets.length;$("s-scans").textContent=scans.length;$("s-running").textContent=scans.filter(s=>["queued","running"].includes(s.status)).length;$("s-completed").textContent=scans.filter(s=>["completed","completed_with_errors"].includes(s.status)).length;
+$("scanTarget").innerHTML='<option value="">Selecione um alvo autorizado…</option>'+targets.map(t=>'<option value="'+t.id+'">'+esc(t.name)+' — '+esc(t.url)+'</option>').join("");
+$("recent").innerHTML=scanTable(scans.slice(0,6));$("historyTable").innerHTML=scanTable(scans);
+$("targetsTable").innerHTML=targets.length?'<div class="tablewrap"><table class="data-table"><thead><tr><th>Nome</th><th>URL</th><th>Autorização até</th><th></th></tr></thead><tbody>'+targets.map(t=>'<tr><td>'+esc(t.name)+'</td><td>'+esc(t.url)+'</td><td>'+esc(t.valid_until)+'</td><td><button class="linkbtn" data-target="'+t.id+'">Auditar →</button></td></tr>').join("")+'</tbody></table></div>':'<div class="empty"><strong>Sem alvos cadastrados</strong>Registre o primeiro domínio autorizado para começar.</div>';
+document.querySelectorAll("[data-scan]").forEach(b=>b.onclick=()=>openDetail(b.dataset.scan));
+document.querySelectorAll("[data-target]").forEach(b=>b.onclick=()=>{route("dashboard");$("scanTarget").value=b.dataset.target;$("newscan").scrollIntoView({behavior:"smooth"})});
+}
+async function load(){try{const data=await Promise.all([api("/api/targets"),api("/api/scans")]);targets=data[0];scans=data[1];render()}catch(err){toast(err.message,true)}}
+$("refresh").onclick=load;$("refreshHistory").onclick=load;
+$("targetform").addEventListener("submit",async e=>{e.preventDefault();const data={name:$("targetName").value,url:$("targetUrl").value,permission:$("permission").value,valid_until:$("validUntil").value,confirmed:$("confirmTarget").checked};try{const saved=await api("/api/targets","POST",data);$("targetform").reset();await load();toast("Alvo autorizado cadastrado");route("dashboard");$("scanTarget").value=saved.id}catch(err){toast(err.message,true)}});
+$("scanform").addEventListener("submit",async e=>{e.preventDefault();if(!selected.size){toast("Selecione ao menos uma ferramenta",true);return}if(mode==="active"&&!$("confirmActive").checked){toast("Confirme a autorização para testes ativos",true);return}const btn=$("startScan");btn.disabled=true;try{const result=await api("/api/scans","POST",{target_id:Number($("scanTarget").value),tools:[...selected],mode,confirmed_active:mode==="active"&&$("confirmActive").checked});toast("Workflow disparado com sucesso");await load();await openDetail(result.id)}catch(err){toast(err.message,true)}finally{btn.disabled=false}});
+async function openDetail(id){detailId=id;route("detail");$("detailContent").innerHTML='<div class="empty">Consultando o workflow e buscando o relatório…</div>';await updateDetail()}
+async function updateDetail(){if(!detailId||!$("view-detail").classList.contains("active"))return;try{const data=await api("/api/scans/"+detailId);const report=data.report;const findings=report?.findings||[];const modules=report?.modules||[];
+let body='<div class="detailtop"><div><span class="eyebrow">'+esc(data.mode==="active"?"Modo ativo":"Modo conservador")+'</span><h2 style="margin:8px 0">'+esc(data.url)+'</h2><div class="muted" style="font-size:12px">Execução '+esc(data.id.slice(0,12))+' · '+shortDate(data.started)+'</div></div>'+status(data.status)+'</div>';
+if(data.error)body+='<div class="safety">'+esc(data.error)+'</div>';
+if(!report)body+='<div class="empty"><strong>'+esc(["queued","running"].includes(data.status)?"Execução em andamento":"Relatório indisponível")+'</strong>O painel sincroniza o resultado após o término do workflow. Atualize para verificar o andamento.</div>';
+else{
+  const counts={critical:0,high:0,medium:0,low:0,info:0};findings.forEach(f=>{const sev=(f.severity||"info").toLowerCase();counts[sev]=(counts[sev]||0)+1});
+  body+='<div class="stats" style="margin:15px 0 22px"><div class="stat"><div class="label">Ferramentas executadas</div><div class="metric">'+modules.length+'</div></div><div class="stat"><div class="label">Críticos / Altos</div><div class="metric">'+(counts.critical+counts.high)+'</div></div><div class="stat"><div class="label">Médios</div><div class="metric">'+counts.medium+'</div></div><div class="stat"><div class="label">Achados estruturados</div><div class="metric">'+findings.length+'</div></div></div>';
+  body+='<div class="panelactions"><h2>Achados identificados</h2><div><a class="btn small secondary" href="/api/scans/'+esc(idSafe(data.id))+'/download?format=json">Exportar JSON</a> <a class="btn small secondary" href="/api/scans/'+esc(idSafe(data.id))+'/download?format=html">Exportar HTML</a></div></div>';
+  body+=findings.length?findings.slice(0,100).map(f=>'<div class="finding"><span class="sev '+esc(f.severity)+'">'+esc(f.severity)+'</span> <span class="muted" style="font-size:11px">'+esc(f.tool)+'</span><div class="title">'+esc(f.title)+'</div><div class="note">'+esc(f.url)+'</div><div class="note">'+esc(f.description)+'</div></div>').join(""):'<div class="empty"><strong>Nenhum achado estruturado</strong>Consulte também as saídas individuais abaixo. Ausência de achados não garante segurança.</div>';
+  body+='<h2 style="margin:28px 0 15px">Resultado por ferramenta</h2><div class="modules">'+modules.map(m=>'<details><summary>'+esc(m.tool)+status(m.status)+'</summary><pre>'+esc(m.excerpt||"Sem saída textual. Consulte os artefatos no GitHub Actions.")+'</pre></details>').join("")+'</div>';
+}
+body+='<div class="panelactions"><small>Os resultados dependem do escopo e das limitações dos scanners.</small><button class="btn small secondary" id="syncDetail">Sincronizar</button></div>';
+$("detailContent").innerHTML=body;$("syncDetail").onclick=updateDetail;
+}catch(err){$("detailContent").innerHTML='<div class="empty">'+esc(err.message)+'</div>'}}
+function idSafe(id){return /^[a-f0-9]{32}$/.test(id)?id:""}
+async function init(){renderTools();const day=new Date();day.setDate(day.getDate()+30);$("validUntil").value=day.toISOString().slice(0,10);try{const s=await api("/api/session");if(s.authenticated){csrf=s.csrf;$("loginback").classList.add("hidden");$("backendbadge").textContent=s.backend==="github"?"GitHub Actions":"Runner local";await load()}else{$("loginback").classList.remove("hidden")}}catch(err){$("loginerror").textContent=err.message}}
+setInterval(()=>{if($("loginback").classList.contains("hidden")){if(detailId&&$("view-detail").classList.contains("active"))updateDetail();else load()}},12000);
+init();
+})();
+</script>
+</body></html>

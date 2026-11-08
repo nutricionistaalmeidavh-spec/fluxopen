@@ -1,0 +1,48 @@
+name: FluxOpen · Auditoria autorizada
+run-name: FluxOpen ${{ inputs.scan_id }}
+on:
+  workflow_dispatch:
+    inputs:
+      payload:
+        description: "Manifesto HMAC emitido pelo painel"
+        required: true
+        type: string
+      signature:
+        description: "Assinatura do manifesto"
+        required: true
+        type: string
+      scan_id:
+        description: "Identificador da auditoria"
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: fluxopen-scans
+  cancel-in-progress: false
+jobs:
+  authorized_scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validar manifesto e executar ferramentas selecionadas
+        env:
+          SCAN_SIGNING_SECRET: ${{ secrets.SCAN_SIGNING_SECRET }}
+          FLUXOPEN_PAYLOAD: ${{ inputs.payload }}
+          FLUXOPEN_SIGNATURE: ${{ inputs.signature }}
+          FLUXOPEN_SCAN_ID: ${{ inputs.scan_id }}
+        run: |
+          python3 scanner/runner.py \
+            --payload "$FLUXOPEN_PAYLOAD" \
+            --signature "$FLUXOPEN_SIGNATURE" \
+            --expected-id "$FLUXOPEN_SCAN_ID" \
+            --output "$RUNNER_TEMP/fluxopen"
+      - name: Arquivar resultados e evidências
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fluxopen-${{ inputs.scan_id }}
+          path: ${{ runner.temp }}/fluxopen/
+          if-no-files-found: warn
+          retention-days: 30
