@@ -194,7 +194,7 @@ async function detail(req,env,id) {
   await refreshRun(env,row);
   row=await env.DB.prepare("SELECT * FROM scans WHERE id=?").bind(id).first();
   const report=parseReport(row);
-  return {...row,tools:JSON.parse(row.tools),report,friendly:report?buildFriendlyReport(report):null};
+  return {...row,tools:JSON.parse(row.tools),report,friendly:report?.friendly||null};
 }
 function escapeHTML(x) {
   return String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
