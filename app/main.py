@@ -1,4 +1,5 @@
 """FluxOpen dashboard API: authenticated, scope-bound, no browser-side GitHub token."""
+from contextlib import contextmanager
 import hashlib
 import hmac
 import io
@@ -43,6 +44,7 @@ DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 app = FastAPI(title="FluxOpen", docs_url=None, redoc_url=None, openapi_url=None)
 
+@contextmanager
 def db():
     con = sqlite3.connect(str(DB_PATH), timeout=20)
     con.row_factory = sqlite3.Row
@@ -53,7 +55,7 @@ def db():
     finally:
         con.close()
 
-with next(db()) as con:
+with db() as con:
     con.executescript("""
     CREATE TABLE IF NOT EXISTS sessions (
       token_hash TEXT PRIMARY KEY, csrf TEXT NOT NULL, expires INTEGER NOT NULL
@@ -82,7 +84,7 @@ def session(request: Request):
     if not token:
         unauthorized()
     hashed = hashlib.sha256(token.encode()).hexdigest()
-    with next(db()) as con:
+    with db() as con:
         record = con.execute("SELECT csrf, expires FROM sessions WHERE token_hash = ?", (hashed,)).fetchone()
     if not record or record["expires"] < time.time():
         unauthorized()
@@ -138,7 +140,7 @@ def login(body: Login, request: Request):
     LOGIN_FAILURES.pop(key, None)
     token = secrets.token_urlsafe(48)
     csrf = secrets.token_urlsafe(32)
-    with next(db()) as con:
+    with db() as con:
         con.execute("DELETE FROM sessions WHERE expires < ?", (int(now),))
         con.execute("INSERT INTO sessions VALUES (?, ?, ?)",
                     (hashlib.sha256(token.encode()).hexdigest(), csrf, int(now + 12 * 3600)))
@@ -151,7 +153,7 @@ def login(body: Login, request: Request):
 @app.post("/api/logout")
 def logout(request: Request, _=Depends(protected)):
     token = request.cookies.get("fluxopen_session", "")
-    with next(db()) as con:
+    with db() as con:
         con.execute("DELETE FROM sessions WHERE token_hash = ?", (hashlib.sha256(token.encode()).hexdigest(),))
         con.commit()
     response = JSONResponse({"ok": True})
@@ -160,7 +162,7 @@ def logout(request: Request, _=Depends(protected)):
 
 @app.get("/api/targets")
 def list_targets(_=Depends(protected)):
-    with next(db()) as con:
+    with db() as con:
         rows = con.execute("SELECT id,name,url,valid_until,created FROM targets ORDER BY id DESC").fetchall()
     return [dict(row) for row in rows]
 
@@ -174,7 +176,7 @@ def create_target(body: TargetIn, _=Depends(protected)):
         url = normalize_target(body.url)
     except ValueError as exc:
         raise HTTPException(422, str(exc))
-    with next(db()) as con:
+    with db() as con:
         try:
             cur = con.execute("INSERT INTO targets (name,url,permission,valid_until,created) VALUES (?,?,?,?,?)",
                               (body.name.strip(), url, body.permission.strip(),
@@ -186,7 +188,14 @@ def create_target(body: TargetIn, _=Depends(protected)):
 
 @app.get("/api/scans")
 def list_scans(_=Depends(protected)):
-    with next(db()) as con:
+    with db() as con:
+        rows = con.execute("""SELECT s.id,s.url,s.tools,s.mode,s.status,s.started,
+          s.updated,s.run_id,s.error,t.name AS target_name FROM scans s
+          JOIN targets t ON t.id=s.target_id ORDER BY s.started DESC LIMIT 100""").fetchall()
+    # Update a small number of pending runs; do not flood the GitHub API.
+    for row in [r for r in rows if r["status"] in ("queued", "running")][:2]:
+        refresh_github(row)
+    with db() as con:
         rows = con.execute("""SELECT s.id,s.url,s.tools,s.mode,s.status,s.started,
           s.updated,s.run_id,s.error,t.name AS target_name FROM scans s
           JOIN targets t ON t.id=s.target_id ORDER BY s.started DESC LIMIT 100""").fetchall()
@@ -207,7 +216,7 @@ def github_request(method, endpoint, **kwargs):
 def mark_scan(scan_id, **values):
     values["updated"] = int(time.time())
     columns = ",".join(k + "=?" for k in values)
-    with next(db()) as con:
+    with db() as con:
         con.execute("UPDATE scans SET " + columns + " WHERE id=?", (*values.values(), scan_id))
         con.commit()
 
@@ -232,7 +241,7 @@ def create_scan(body: ScanIn, _=Depends(protected)):
         raise HTTPException(422, str(exc))
     if body.mode == "active" and not body.confirmed_active:
         raise HTTPException(422, "Confirme a autorização para testes ativos")
-    with next(db()) as con:
+    with db() as con:
         target = con.execute("SELECT * FROM targets WHERE id=?", (body.target_id,)).fetchone()
     if not target:
         raise HTTPException(404, "Alvo não encontrado")
@@ -246,7 +255,7 @@ def create_scan(body: ScanIn, _=Depends(protected)):
     now = int(time.time())
     manifest = dict(id=scan_id, url=url, tools=selected, mode=body.mode, issued=now, expires=now + 7200)
     packed, signature = sign_manifest(manifest, SECRET)
-    with next(db()) as con:
+    with db() as con:
         con.execute("""INSERT INTO scans
           (id,target_id,url,tools,mode,status,started,updated) VALUES (?,?,?,?,?,?,?,?)""",
                     (scan_id, body.target_id, url, json.dumps(selected), body.mode, "queued", now, now))
@@ -309,7 +318,7 @@ def refresh_github(row):
 
 @app.get("/api/scans/{scan_id}")
 def scan_detail(scan_id: str, _=Depends(protected)):
-    with next(db()) as con:
+    with db() as con:
         row = con.execute("SELECT * FROM scans WHERE id=?", (scan_id,)).fetchone()
     if not row:
         raise HTTPException(404, "Auditoria não encontrada")
@@ -322,7 +331,7 @@ def scan_detail(scan_id: str, _=Depends(protected)):
                 mark_scan(scan_id, status=report.get("status", "failed"), report=json.dumps(report))
             except Exception:
                 pass
-    with next(db()) as con:
+    with db() as con:
         row = con.execute("SELECT * FROM scans WHERE id=?", (scan_id,)).fetchone()
     output = dict(row)
     output["tools"] = json.loads(output["tools"])
@@ -331,7 +340,7 @@ def scan_detail(scan_id: str, _=Depends(protected)):
 
 @app.get("/api/scans/{scan_id}/download")
 def download(scan_id: str, format: str = "json", _=Depends(protected)):
-    with next(db()) as con:
+    with db() as con:
         row = con.execute("SELECT report FROM scans WHERE id=?", (scan_id,)).fetchone()
     if not row or not row["report"]:
         raise HTTPException(404, "Relatório ainda indisponível")
