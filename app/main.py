@@ -336,6 +336,13 @@ def scan_detail(scan_id: str, _=Depends(protected)):
     output = dict(row)
     output["tools"] = json.loads(output["tools"])
     output["report"] = json.loads(output["report"]) if output["report"] else None
+    if BACKEND == "local" and output["report"] is None:
+        progress = REPORTS_DIR / scan_id / "progress.json"
+        if progress.exists():
+            try:
+                output["report"] = json.loads(progress.read_text())
+            except (OSError, ValueError):
+                pass
     return output
 
 @app.get("/api/scans/{scan_id}/download")
