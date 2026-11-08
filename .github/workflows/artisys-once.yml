@@ -65,11 +65,3 @@ jobs:
           with urllib.request.urlopen(request, timeout=30) as response:
               print("FluxOpen callback HTTP", response.status)
           PY
-      - name: Salvar evidências da auditoria
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: fluxopen-25d3aad623c8b467bf5c329b614ca01f
-          path: ${{ runner.temp }}/fluxopen/
-          if-no-files-found: warn
-          retention-days: 30
