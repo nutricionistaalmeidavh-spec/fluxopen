@@ -1,0 +1,16 @@
+name: FluxOpen · Verificação
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Testes de autorização e assinatura
+        run: python3 -m unittest discover -s tests -v
+      - name: Compilação de Python
+        run: python3 -m compileall -q security.py app scanner
