@@ -25,6 +25,8 @@ jobs:
           node --check /tmp/fluxopen-ui.js
       - name: Testes do Cloudflare Worker
         run: node --test tests/test_worker.mjs
+      - name: Testes do relatório amigável e HTML seguro
+        run: node --test tests/test_friendly_report.mjs tests/test_friendly_ui.mjs
       - name: Testes criptográficos WebAuthn e Face ID
         run: node --test tests/test_passkeys.mjs
       - name: Testar recuperação idempotente de auditorias
