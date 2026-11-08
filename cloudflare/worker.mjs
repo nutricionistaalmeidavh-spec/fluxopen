@@ -164,6 +164,12 @@ async function createScan(req,env) {
   return json({id,status:"queued",backend:"github"});
 }
 async function refreshRun(env,row) {
+  // The "Sincronizar" button also repairs old D1-only queued entries immediately.
+  // scan_dispatch claims make this safe even if a Cron Trigger runs concurrently.
+  if(row.status==="queued" && !row.run_id && epoch()-row.started>90){
+    await reconcilePending(env,{github:gh,signManifest:encodeManifest});
+    return;
+  }
   if(!env.GH_TOKEN||!["queued","running"].includes(row.status)||epoch()-row.last_synced<35)return;
   const n=epoch();
   await env.DB.prepare("UPDATE scans SET last_synced=? WHERE id=?").bind(n,row.id).run();
