@@ -226,8 +226,14 @@ def execute(tool, target, host, root):
         status = "ok" if result.returncode == 0 else "warning"
         if result.returncode in (125, 126, 127):
             status = "error"
+        metrics = {}
+        if tool == "zap":
+            count = re.search(r"(?<!\\w)WARN-NEW:\\s*(\\d+)(?=\\s|$)", log)
+            if count:
+                metrics["zap_warnings"] = int(count.group(1))
         return dict(tool=tool, status=status, code=result.returncode,
-                    seconds=round(time.time() - began, 1), excerpt=excerpt(root, tool, log))
+                    seconds=round(time.time() - began, 1),
+                    excerpt=excerpt(root, tool, log), **metrics)
     except subprocess.TimeoutExpired:
         return dict(tool=tool, status="error", seconds=round(time.time() - began, 1),
                     excerpt="Tempo limite atingido; execução interrompida.")
