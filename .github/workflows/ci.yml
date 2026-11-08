@@ -29,6 +29,11 @@ jobs:
         run: node --test tests/test_passkeys.mjs
       - name: Testar recuperação idempotente de auditorias
         run: node --test tests/test_dispatch.mjs
+      - name: Testes do motor de relatórios amigáveis
+        run: node --test tests/test_friendly_report.mjs
+      - name: Validar JavaScript do painel Cloudflare
+        run: |
+          node --test tests/test_panel_compile.mjs
       - name: Compilação de Python
         run: python3 -m compileall -q security.py app scanner
   scanner_smoke:
