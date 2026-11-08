@@ -205,7 +205,9 @@ async function downloadReport(env,id,format) {
   if(!row||!row.report)fail(404,"Relatório ainda indisponível");
   const report=JSON.parse(row.report);
   report.friendly=buildFriendlyReport(report);
-  const headers={"Content-Disposition":"attachment; filename=\"fluxopen-"+id+"."+format+"\""};
+  const safeHost=(()=>{try{return new URL(report.url).hostname.replace(/[^a-z0-9.-]/gi,"_").slice(0,90);}catch{return "alvo";}})();
+  const stamp=new Date((report.ended||report.started||0)*1000).toISOString().slice(0,10);
+  const headers={"Content-Disposition":"attachment; filename=\"FluxOpen_Relatorio_"+safeHost+"_"+stamp+"_"+id.slice(0,8)+"."+format+"\""};
   if(format==="json")return json(report,200,headers);
   if(format!=="html")fail(422,"Formato inválido");
   return content(renderFriendlyHtml(report),200,headers);
