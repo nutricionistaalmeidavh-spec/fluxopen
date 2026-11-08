@@ -59,7 +59,7 @@ test("domínio inválido não cria caminho ou nome perigoso",()=>{
 
 test("HTML oculta credenciais em evidencias e logs, mantendo alerta tecnico",()=>{
   const leak={...report,modules:[{tool:"zap",status:"warning",
-    excerpt:"GET https://artisys.dev/admin?token=ABCD123&email=pessoa%40example.com\\nAuthorization: Bearer xyz789\\nCookie: session=private111\\nerror 403"}],
+    excerpt:"GET https://artisys.dev/admin?token=ABCD123&email=pessoa%40example.com\nAuthorization: Bearer xyz789\nCookie: session=private111\nerror 403"}],
     findings:[{tool:"zap",rule_id:"10038",title:"Missing CSP",severity:"medium",
       url:"https://artisys.dev/page?api_key=valuable123",description:"token=private222",
       urls:["https://artisys.dev/page?code=secret123"]}]};
