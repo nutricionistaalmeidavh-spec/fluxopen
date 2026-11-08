@@ -1,0 +1,75 @@
+name: FluxOpen · Auditoria conservadora ArtiSys (uma vez)
+run-name: FluxOpen ArtiSys · 25d3aad6
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.fluxopen/requests/artisys-20261108.json'
+permissions:
+  contents: read
+concurrency:
+  group: fluxopen-scans
+  cancel-in-progress: false
+
+jobs:
+  artisys_root_audit:
+    if: github.repository == 'nutricionistaalmeidavh-spec/fluxopen'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validar autorização HMAC e auditar raiz do ArtiSys
+        env:
+          SCAN_SIGNING_SECRET: ${{ secrets.SCAN_SIGNING_SECRET }}
+        run: |
+          python3 ops/one_shot_scan.py --output "$RUNNER_TEMP/fluxopen"
+      - name: Devolver relatório assinado ao painel
+        if: always()
+        env:
+          SCAN_SIGNING_SECRET: ${{ secrets.SCAN_SIGNING_SECRET }}
+          FLUXOPEN_CALLBACK_URL: https://fluxopen-security.nutricionistaalmeidavh.workers.dev/api/callback
+          FLUXOPEN_SCAN_ID: 25d3aad623c8b467bf5c329b614ca01f
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          import hmac
+          import json
+          import os
+          from pathlib import Path
+          import urllib.request
+
+          output = Path(os.environ["RUNNER_TEMP"]) / "fluxopen"
+          output.mkdir(parents=True, exist_ok=True)
+          report = output / "report.json"
+          if not report.exists():
+              report.write_text(json.dumps({
+                  "id": os.environ["FLUXOPEN_SCAN_ID"],
+                  "url": "https://artisys.dev/", "mode": "passive",
+                  "status": "failed", "modules": [], "findings": [],
+                  "error": "O runner não produziu relatório; consulte o log do GitHub Actions."
+              }))
+          secret = os.environ.get("SCAN_SIGNING_SECRET", "")
+          if len(secret) < 32:
+              raise RuntimeError("SCAN_SIGNING_SECRET ausente no GitHub Actions")
+          data = json.loads(report.read_text())
+          data["findings"] = data.get("findings", [])[:60]
+          for module in data.get("modules", []):
+              module["excerpt"] = str(module.get("excerpt", ""))[:4000]
+          raw = json.dumps(data, ensure_ascii=False, separators=(",", ":")).encode()
+          signature = hmac.new(secret.encode(), raw, hashlib.sha256).hexdigest()
+          request = urllib.request.Request(
+              os.environ["FLUXOPEN_CALLBACK_URL"],
+              data=raw, method="POST",
+              headers={"Content-Type": "application/json", "X-FluxOpen-Signature": signature}
+          )
+          with urllib.request.urlopen(request, timeout=30) as response:
+              print("FluxOpen callback HTTP", response.status)
+          PY
+      - name: Salvar evidências da auditoria
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fluxopen-25d3aad623c8b467bf5c329b614ca01f
+          path: ${{ runner.temp }}/fluxopen/
+          if-no-files-found: warn
+          retention-days: 30
