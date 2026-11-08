@@ -1,4 +1,5 @@
 import { PANEL_HTML } from "./panel.mjs";
+import { registrationOptions, registrationFinish, authenticationOptions, authenticationFinish, identity, setIdentity, checkIdentity } from "./webauthn.mjs";
 /**
  * FluxOpen Cloudflare Worker.
  * Workers Free + D1 Free; scanner containers remain in GitHub Actions.
@@ -84,6 +85,11 @@ async function auth(req,env,mutating=false) {
   }
   return record;
 }
+async function newSession(env) {
+  const token=b64url(rand(48)), csrf=b64url(rand(32)), now=epoch();
+  await env.DB.prepare("INSERT INTO sessions(token_hash,csrf,expires) VALUES (?,?,?)").bind(await digest(token),csrf,now+43200).run();
+  return {csrf, sessionCookie:"fluxopen_session="+token+"; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=43200"};
+}
 async function login(req,env) {
   if(!env.ADMIN_PASSWORD||env.ADMIN_PASSWORD.length<12)fail(503,"Painel ainda não configurado: ADMIN_PASSWORD ausente");
   const ip=await digest(req.headers.get("cf-connecting-ip")||"unknown");
@@ -92,17 +98,18 @@ async function login(req,env) {
   if(state&&state.attempts>=6&&now-state.first_attempt<900)fail(429,"Muitas tentativas. Aguarde 15 minutos");
   const data=await readJSON(req);
   const input=typeof data.password==="string"?data.password:"";
-  const a=await digest(input), b=await digest(env.ADMIN_PASSWORD);
-  if(!same(a,b)) {
+  const valid=(typeof data.email==="string"&&data.email.trim().length>0)
+    ? await checkIdentity(env,data.email,input)
+    : same(await digest(input),await digest(env.ADMIN_PASSWORD));
+  if(!valid) {
     const attempts=state&&now-state.first_attempt<900?state.attempts+1:1;
     const first=state&&now-state.first_attempt<900?state.first_attempt:now;
     await env.DB.prepare("INSERT INTO login_failures(ip_hash,attempts,first_attempt) VALUES (?,?,?) ON CONFLICT(ip_hash) DO UPDATE SET attempts=excluded.attempts,first_attempt=excluded.first_attempt").bind(ip,attempts,first).run();
     fail(401,"Senha incorreta");
   }
   await env.DB.prepare("DELETE FROM login_failures WHERE ip_hash=?").bind(ip).run();
-  const token=b64url(rand(48)),csrf=b64url(rand(32));
-  await env.DB.prepare("INSERT INTO sessions(token_hash,csrf,expires) VALUES (?,?,?)").bind(await digest(token),csrf,now+43200).run();
-  return json({authenticated:true,csrf},200,{"Set-Cookie":"fluxopen_session="+token+"; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=43200"});
+  const fresh=await newSession(env);
+  return json({authenticated:true,csrf:fresh.csrf},200,{"Set-Cookie":fresh.sessionCookie});
 }
 async function gh(env,endpoint,opts={}) {
   if(!env.GH_TOKEN)fail(503,"Configure GH_TOKEN como secret no Cloudflare para disparar workflows");
@@ -225,6 +232,46 @@ export default {
         catch(e){if(e.status===401)return json({authenticated:false});throw e;}
       }
       if(path==="/api/login"&&method==="POST")return await login(req,env);
+      if(path==="/api/security"&&method==="GET"){
+        await auth(req,env);
+        return json(await identity(env));
+      }
+      if(path==="/api/security/password"&&method==="POST"){
+        await auth(req,env,true);
+        const {email,password}=await readJSON(req);
+        try{return json(await setIdentity(env,email,password))}
+        catch(e){fail(422,e.message||"Não foi possível configurar a senha");}
+      }
+      if(path==="/api/passkeys/registration/options"&&method==="POST"){
+        await auth(req,env,true);
+        const result=await registrationOptions(req,env,await digest(cookie(req)));
+        return json(result.body,200,{"Set-Cookie":result.cookie});
+      }
+      if(path==="/api/passkeys/registration/verify"&&method==="POST"){
+        await auth(req,env,true);
+        const body=await readJSON(req,60000);
+        try{
+          const result=await registrationFinish(req,env,await digest(cookie(req)),body);
+          return json({ok:true,id:result.id},200,{"Set-Cookie":result.clearCookie});
+        }catch(e){fail(422,"Não foi possível registrar a chave-senha: "+String(e.message).slice(0,180));}
+      }
+      if(path==="/api/passkeys/authentication/options"&&method==="POST"){
+        try{
+          const result=await authenticationOptions(req,env);
+          return json(result.body,200,{"Set-Cookie":result.cookie});
+        }catch(e){fail(422,String(e.message).slice(0,180));}
+      }
+      if(path==="/api/passkeys/authentication/verify"&&method==="POST"){
+        const body=await readJSON(req,60000);
+        try{
+          const result=await authenticationFinish(req,env,body);
+          const fresh=await newSession(env);
+          const response=json({authenticated:true,csrf:fresh.csrf});
+          response.headers.append("Set-Cookie",fresh.sessionCookie);
+          response.headers.append("Set-Cookie",result.clearCookie);
+          return response;
+        }catch(e){fail(401,"Chave-senha recusada: "+String(e.message).slice(0,180));}
+      }
       if(path==="/api/logout"&&method==="POST"){
         await auth(req,env,true);
         await env.DB.prepare("DELETE FROM sessions WHERE token_hash=?").bind(await digest(cookie(req))).run();

@@ -25,6 +25,8 @@ jobs:
           node --check /tmp/fluxopen-ui.js
       - name: Testes do Cloudflare Worker
         run: node --test tests/test_worker.mjs
+      - name: Testes criptográficos WebAuthn e Face ID
+        run: node --test tests/test_passkeys.mjs
       - name: Compilação de Python
         run: python3 -m compileall -q security.py app scanner
   scanner_smoke:
