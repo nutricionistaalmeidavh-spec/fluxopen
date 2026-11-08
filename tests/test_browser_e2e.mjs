@@ -25,7 +25,7 @@ test("FluxOpen: painel mobile exibe login e passkey sem overflow",async()=>{
     await page.locator("#loginform").waitFor({state:"visible"});
     assert.equal(await page.locator("#passkeyLogin").isVisible(),true);
     assert.equal(await page.locator("#loginEmail").isVisible(),true);
-    assert.equal(await page.locator("#loginPassword").isVisible(),true);
+    assert.equal(await page.locator("#password").isVisible(),true);
     const size=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,viewport:innerWidth}));
     assert.ok(size.scroll<=size.viewport+2,JSON.stringify(size));
   }finally{await browser.close()}
