@@ -93,3 +93,17 @@ test("ferramentas ignoradas nao contam como executadas",()=>{
   assert.equal(result.incomplete,true);
   assert.match(result.caveats.join(" "),/ignorada/i);
 });
+
+test("exportacao oculta valores de credenciais em URL e evidencias",()=>{
+  const report=fixture({url:"https://artisys.dev/?token=abcdef&key=xyz",
+    modules:[{tool:"nikto",status:"warning",excerpt:"https://artisys.dev/?api_key=private123&code=abc"}]});
+  const html=renderFriendlyHtml(report);
+  assert.doesNotMatch(html,/abcdef|private123|key=xyz|code=abc/);
+  assert.match(html,/\[REDACTED\]/);
+});
+test("auditoria com ferramentas ignoradas nao afirma avaliacao completa",()=>{
+  const report=fixture({modules:[{tool:"sqlmap",status:"skipped",excerpt:"Sem query"}]});
+  const result=buildFriendlyReport(report);
+  assert.match(result.headline,/parcial|incomplet/i);
+  assert.match(result.assessment,/completa|inconclusiv/i);
+});
