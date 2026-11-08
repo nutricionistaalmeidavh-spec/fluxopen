@@ -14,5 +14,14 @@ jobs:
         run: python3 -m pip install -r app/requirements.txt
       - name: Testes de autorização e assinatura
         run: python3 -m unittest discover -s tests -v
+      - name: Sintaxe JavaScript do painel
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          text = Path("app/static/index.html").read_text()
+          assert "<script>" in text and "</script>" in text
+          Path("/tmp/fluxopen-ui.js").write_text(text.split("<script>",1)[1].split("</script>",1)[0])
+          PY
+          node --check /tmp/fluxopen-ui.js
       - name: Compilação de Python
         run: python3 -m compileall -q security.py app scanner
