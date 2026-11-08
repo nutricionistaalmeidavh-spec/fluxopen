@@ -156,7 +156,7 @@ async function createScan(req,env) {
   const {packed,signature}=await encodeManifest({id,url,tools:data.tools,mode:data.mode,issued:now,expires:now+7200},env.SCAN_SIGNING_SECRET);
   await env.DB.prepare("INSERT INTO scans(id,target_id,url,tools,mode,status,started,updated,last_synced) VALUES (?,?,?,?,?,?,?,?,0)").bind(id,data.target_id,url,JSON.stringify(data.tools),data.mode,"queued",now,now).run();
   try {
-    await gh(env,"/actions/workflows/scan.yml/dispatches",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({ref:"main",inputs:{payload:packed,signature,scan_id:id,verification_only:data.verification_only===true}})});
+    await gh(env,"/actions/workflows/scan.yml/dispatches",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({ref:"main",inputs:{payload:packed,signature,scan_id:id,verification_only:data.verification_only===true?"true":"false"}})});
   } catch(error) {
     await env.DB.prepare("UPDATE scans SET status='failed',error=?,updated=? WHERE id=?").bind("Falha no disparo: "+String(error.message).slice(0,180),epoch(),id).run();
     throw error;
