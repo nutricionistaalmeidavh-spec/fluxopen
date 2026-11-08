@@ -27,6 +27,8 @@ jobs:
         run: node --test tests/test_worker.mjs
       - name: Testes do relatório amigável e HTML seguro
         run: node --test tests/test_friendly_report.mjs tests/test_friendly_ui.mjs
+      - name: Exportação HTML legível no celular e nomes de arquivo amigáveis
+        run: node --test tests/test_report_export.mjs
       - name: Testes criptográficos WebAuthn e Face ID
         run: node --test tests/test_passkeys.mjs
       - name: Testar recuperação idempotente de auditorias
