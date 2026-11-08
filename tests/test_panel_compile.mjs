@@ -8,7 +8,7 @@ test("production Cloudflare panel compiles and renders friendly summary labels",
   assert.ok(script,"missing client script");
   assert.doesNotThrow(()=>new vm.Script(script));
   assert.match(PANEL_HTML,/Resumo executivo/);
-  assert.match(PANEL_HTML,/Baixar relatório amigável/);
+  assert.match(PANEL_HTML,/Pentest Diagnoses/);
   assert.match(PANEL_HTML,/Evidências técnicas por ferramenta/);
   assert.match(PANEL_HTML,/id="passkeyLogin"/,"Face ID login preserved");
   assert.match(PANEL_HTML,/id="passkeyRegister"/,"Face ID registration preserved");
