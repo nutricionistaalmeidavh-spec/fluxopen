@@ -227,7 +227,7 @@ def execute(tool, target, host, root):
         if result.returncode in (125, 126, 127):
             status = "error"
         # Some scanner wrappers return 0 after printing CLI usage instead of running.
-        if tool == "nikto" and re.search(r"(?im)^\\s*(?:Usage:|Options:|Invalid option|Unknown option)", log):
+        if tool == "nikto" and re.search(r"(?im)^\s*(?:Usage:|Options:|Invalid option|Unknown option)", log):
             status = "error"
         # ZAP stdout can contain findings even when structured report generation fails.
         if tool == "zap" and re.search(r"Automation plan failures|NoSuchFileException|failed to generate report", log, re.I):
