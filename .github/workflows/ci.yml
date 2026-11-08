@@ -25,10 +25,17 @@ jobs:
           node --check /tmp/fluxopen-ui.js
       - name: Testes do Cloudflare Worker
         run: node --test tests/test_worker.mjs
+      - name: Testes do relatório amigável e HTML seguro
+        run: node --test tests/test_friendly_report.mjs tests/test_friendly_ui.mjs
       - name: Testes criptográficos WebAuthn e Face ID
         run: node --test tests/test_passkeys.mjs
       - name: Testar recuperação idempotente de auditorias
         run: node --test tests/test_dispatch.mjs
+      - name: Testes do motor de relatórios amigáveis
+        run: node --test tests/test_friendly_report.mjs
+      - name: Validar JavaScript do painel Cloudflare
+        run: |
+          node --test tests/test_panel_compile.mjs
       - name: Compilação de Python
         run: python3 -m compileall -q security.py app scanner
   scanner_smoke:

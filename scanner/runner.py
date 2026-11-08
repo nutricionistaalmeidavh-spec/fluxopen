@@ -2,6 +2,7 @@
 import argparse
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -33,7 +34,7 @@ def command(tool, target, host):
     """Arguments are lists, never shells; scope remains the single input host."""
     if tool == "zap":
         return ["zap-baseline.py", "-t", target, "-m", "1", "-I",
-                "-J", "/zap/wrk/zap.json", "-r", "/zap/wrk/zap.html"]
+                "-J", "zap.json", "-r", "zap.html"]
     if tool == "nuclei":
         return ["-u", target, "-jsonl", "-o", "/out/nuclei.jsonl", "-rl", "2",
                 "-c", "1", "-timeout", "8", "-retries", "0", "-ni",
@@ -95,36 +96,93 @@ def parse_jsonl(path, max_rows=100):
     return result
 
 def normalize_findings(tool, root):
+    """Normalize structured findings and ZAP stdout fallback, never infer exploits."""
     findings = []
     if tool == "nuclei":
         for item in parse_jsonl(root / "nuclei.jsonl"):
-            meta = item.get("info", {})
-            findings.append({"tool": tool, "severity": str(meta.get("severity", "info")).lower(),
+            if not isinstance(item, dict):
+                continue
+            meta = item.get("info") or {}
+            findings.append({"tool": tool, "rule_id": str(item.get("template-id", ""))[:120],
+                "severity": str(meta.get("severity", "info")).lower(),
                 "title": str(meta.get("name", item.get("template-id", "Nuclei")))[:180],
                 "url": str(item.get("matched-at", ""))[:500],
                 "description": str(item.get("template-id", ""))[:300]})
-    elif tool == "zap" and (root / "zap.json").exists():
-        try:
-            data = json.loads((root / "zap.json").read_text(errors="replace"))
-            for site in data.get("site", []):
-                for alert in site.get("alerts", []):
-                    level = str(alert.get("riskdesc", "info")).split(" ")[0].lower()
-                    findings.append({"tool": tool, "severity": level,
-                        "title": str(alert.get("name", ""))[:180],
-                        "url": str(site.get("@name", ""))[:500],
-                        "description": str(alert.get("desc", ""))[:600]})
-        except (ValueError, OSError):
-            pass
+    elif tool == "zap":
+        path = root / "zap.json"
+        if path.exists():
+            try:
+                data = json.loads(path.read_text(errors="replace"))
+                for site in data.get("site", []) if isinstance(data, dict) else []:
+                    for alert in site.get("alerts", []):
+                        if not isinstance(alert, dict):
+                            continue
+                        raw_instances = alert.get("instances", [])
+                        instances = raw_instances if isinstance(raw_instances, list) else []
+                        urls = [str(x.get("uri"))[:500] for x in instances[:12]
+                                if isinstance(x, dict) and x.get("uri")]
+                        try:
+                            count = max(1, min(999, int(alert.get("count", len(instances) or 1))))
+                        except (ValueError, TypeError):
+                            count = max(1, len(instances))
+                        risk = str(alert.get("riskdesc", alert.get("riskcode", "info"))).split(" ")[0].lower()
+                        severity = {"0": "info", "1": "low", "2": "medium", "3": "high"}.get(risk, risk)
+                        findings.append({"tool": "zap",
+                            "rule_id": str(alert.get("pluginid", alert.get("alertRef", "")))[:60],
+                            "severity": severity, "title": str(alert.get("name", ""))[:180],
+                            "url": urls[0] if urls else str(site.get("@name", ""))[:500],
+                            "urls": urls, "occurrences": count,
+                            "description": str(alert.get("desc", ""))[:500]})
+            except (ValueError, OSError):
+                pass
+        if not findings and (root / "zap.log").is_file():
+            # ZAP report generation may fail even though baseline warnings are printed.
+            # Preserve rule IDs and occurrences; warnings are NOT confirmed exploits.
+            log = (root / "zap.log").read_text(errors="replace")[-60000:]
+            sections = list(re.finditer(
+                r"(?m)^\s*WARN-NEW:\s*(.+?)\s+\[(\d{5})\]\s+x\s+(\d+)\s*$", log))
+            for index, match in enumerate(sections[:100]):
+                following = log[match.end():sections[index+1].start()
+                                if index+1 < len(sections) else len(log)]
+                urls = re.findall(r"https?://[^\s()<>]+", following)[:12]
+                findings.append({"tool": "zap", "rule_id": match.group(2),
+                    "severity": "warning", "title": match.group(1)[:180],
+                    "url": urls[0] if urls else "", "urls": urls,
+                    "occurrences": min(999, int(match.group(3))),
+                    "description": "Aviso do ZAP Baseline; requer validação técnica."})
     elif tool == "testssl" and (root / "testssl.json").exists():
         try:
-            items = json.loads((root / "testssl.json").read_text(errors="replace"))
-            for item in items if isinstance(items, list) else []:
-                sev = str(item.get("severity", "info")).lower()
-                if sev in ("high", "critical", "medium", "low", "warning"):
-                    findings.append({"tool": tool, "severity": sev,
-                        "title": str(item.get("id", "TLS"))[:180],
-                        "url": str(item.get("ip", ""))[:200],
-                        "description": str(item.get("finding", ""))[:400]})
+            data = json.loads((root / "testssl.json").read_text(errors="replace"))
+            entries = []
+            if isinstance(data, list):
+                entries = [(x, "") for x in data]
+            elif isinstance(data, dict):
+                # --jsonfile-pretty emits a nested scanResult containing section arrays.
+                # clientProblem* are scanner/CLI issues, NOT target vulnerabilities.
+                for endpoint in data.get("scanResult", []):
+                    if not isinstance(endpoint, dict):
+                        continue
+                    host = str(endpoint.get("targetHost", ""))[:250]
+                    for section, records in endpoint.items():
+                        if isinstance(records, list) and section != "pretest":
+                            entries.extend((x, host) for x in records)
+            for item, host in entries:
+                if not isinstance(item, dict):
+                    continue
+                severity = str(item.get("severity", "info")).lower()
+                if severity not in ("low", "medium", "high", "critical", "warn", "warning"):
+                    continue
+                rule_id = str(item.get("id", ""))[:120]
+                finding = str(item.get("finding", ""))[:400]
+                if not finding or re.search(r"\b(?:not offered|not supported|not vulnerable|disabled)\b",
+                                            finding, re.IGNORECASE):
+                    continue
+                if severity == "warn":
+                    severity = "warning"
+                findings.append({"tool": "testssl", "rule_id": rule_id,
+                    "severity": severity, "title": rule_id,
+                    "url": "https://" + host + "/" if host else "",
+                    "description": finding})
         except (ValueError, OSError):
             pass
     return findings[:150]
@@ -168,8 +226,14 @@ def execute(tool, target, host, root):
         status = "ok" if result.returncode == 0 else "warning"
         if result.returncode in (125, 126, 127):
             status = "error"
+        metrics = {}
+        if tool == "zap":
+            count = re.search(r"(?<!\\w)WARN-NEW:\\s*(\\d+)(?=\\s|$)", log)
+            if count:
+                metrics["zap_warnings"] = int(count.group(1))
         return dict(tool=tool, status=status, code=result.returncode,
-                    seconds=round(time.time() - began, 1), excerpt=excerpt(root, tool, log))
+                    seconds=round(time.time() - began, 1),
+                    excerpt=excerpt(root, tool, log), **metrics)
     except subprocess.TimeoutExpired:
         return dict(tool=tool, status="error", seconds=round(time.time() - began, 1),
                     excerpt="Tempo limite atingido; execução interrompida.")
