@@ -38,6 +38,36 @@ jobs:
             --signature "$FLUXOPEN_SIGNATURE" \
             --expected-id "$FLUXOPEN_SCAN_ID" \
             --output "$RUNNER_TEMP/fluxopen"
+      - name: Devolver relatório assinado ao painel Cloudflare
+        if: always()
+        continue-on-error: true
+        env:
+          SCAN_SIGNING_SECRET: ${{ secrets.SCAN_SIGNING_SECRET }}
+          FLUXOPEN_CALLBACK_URL: https://fluxopen-security.nutricionistaalmeidavh.workers.dev/api/callback
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          import hmac
+          import os
+          from pathlib import Path
+          import urllib.request
+          report = Path(os.environ["RUNNER_TEMP"]) / "fluxopen" / "report.json"
+          key = os.getenv("SCAN_SIGNING_SECRET", "")
+          if not report.is_file() or len(key) < 32:
+              print("Sem relatório assinado. Consultar artefatos no workflow.")
+          else:
+              data = report.read_bytes()
+              signature = hmac.new(key.encode(), data, hashlib.sha256).hexdigest()
+              request = urllib.request.Request(
+                  os.environ["FLUXOPEN_CALLBACK_URL"],
+                  data=data,
+                  method="POST",
+                  headers={"Content-Type":"application/json",
+                           "X-FluxOpen-Signature":signature},
+              )
+              with urllib.request.urlopen(request, timeout=25) as response:
+                  print("Callback FluxOpen HTTP", response.status)
+          PY
       - name: Arquivar resultados e evidências
         if: always()
         uses: actions/upload-artifact@v4
