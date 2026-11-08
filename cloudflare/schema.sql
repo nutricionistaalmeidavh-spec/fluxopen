@@ -51,3 +51,6 @@ CREATE TABLE IF NOT EXISTS webauthn_challenges (
   expires INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_webauthn_challenges_expire ON webauthn_challenges(expires);
+
+-- Idempotency claims for recovering queued GitHub Actions scans.
+CREATE TABLE IF NOT EXISTS scan_dispatch (scan_id TEXT PRIMARY KEY,claimed_at INTEGER NOT NULL);
