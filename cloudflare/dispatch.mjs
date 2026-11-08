@@ -55,7 +55,7 @@ export async function reconcilePending(env,{now=epoch(),github,signManifest}={})
       await github(env,"/actions/workflows/scan.yml/dispatches",{
         method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({ref:"main",inputs:{
-          payload:packed,signature,scan_id:row.id,verification_only:false
+          payload:packed,signature,scan_id:row.id,verification_only:"false"
         }})
       });
       await env.DB.prepare(
