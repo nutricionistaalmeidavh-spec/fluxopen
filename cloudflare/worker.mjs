@@ -223,9 +223,12 @@ async function callback(req,env) {
   if(!row)fail(404,"Auditoria não localizada");
   if(report.url!==row.url||report.mode!==row.mode||!Array.isArray(report.modules)||report.modules.length>10||!Array.isArray(report.findings)||report.findings.length>200)fail(422,"Relatório fora do escopo");
   const allowed=JSON.parse(row.tools);
-  if(report.modules.some(m=>!allowed.includes(m.tool)))fail(422,"Ferramentas inconsistentes");
+  if(report.modules.some(m=>!m||typeof m!=="object"||!allowed.includes(m.tool)||!["ok","error","skipped","timeout"].includes(m.status)||typeof m.excerpt!=="string"||m.excerpt.length>16000))fail(422,"Módulos inválidos");
+  if(report.findings.some(f=>!f||typeof f!=="object"||!allowed.includes(f.tool)||!["critical","high","medium","low","info","informational"].includes(f.severity)||typeof f.title!=="string"||f.title.length>500||typeof f.url!=="string"||f.url.length>2048))fail(422,"Achados inválidos");
   if(!["completed","completed_with_errors","failed"].includes(report.status))fail(422,"Status de relatório inválido");
-  await env.DB.prepare("UPDATE scans SET report=?,status=?,updated=?,error=NULL WHERE id=?").bind(JSON.stringify(report),report.status,epoch(),report.id).run();
+  if(!["queued","running"].includes(row.status))fail(409,"Auditoria já finalizada");
+  const saved=await env.DB.prepare("UPDATE scans SET report=?,status=?,updated=?,error=NULL WHERE id=? AND status IN ('queued','running') AND report IS NULL").bind(JSON.stringify(report),report.status,epoch(),report.id).run();
+  if(saved.meta?.changes!==1)fail(409,"Callback duplicado ou auditoria já finalizada");
   return json({ok:true});
 }
 export default {
