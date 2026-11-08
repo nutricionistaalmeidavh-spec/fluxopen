@@ -1,0 +1,10 @@
+# Optional self-hosted worker. Docker socket is privileged: only use behind VPN/TLS.
+services:
+  panel:
+    build:
+      context: .
+      dockerfile: app/Dockerfile.local
+    environment:
+      SCAN_BACKEND: local
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
