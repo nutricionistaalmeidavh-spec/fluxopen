@@ -60,7 +60,8 @@ jobs:
           request = urllib.request.Request(
               os.environ["FLUXOPEN_CALLBACK_URL"],
               data=raw, method="POST",
-              headers={"Content-Type": "application/json", "X-FluxOpen-Signature": signature}
+              headers={"Content-Type": "application/json", "X-FluxOpen-Signature": signature,
+                           "User-Agent": "FluxOpen-GitHub-Actions/1.0"}
           )
           with urllib.request.urlopen(request, timeout=30) as response:
               print("FluxOpen callback HTTP", response.status)
